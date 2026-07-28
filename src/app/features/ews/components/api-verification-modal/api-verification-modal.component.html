@@ -1,0 +1,509 @@
+<p-dialog [(visible)]="visible" [modal]="true" [style]="{width: '95vw', height: '95vh'}" [draggable]="false" [resizable]="false" [maximizable]="true"
+          header="API Verification Center" [contentStyle]="{'height': '100%', 'padding': '0', 'overflow': 'hidden'}" styleClass="api-verification-dialog">
+  
+  <div class="api-verification-container">
+    
+    <!-- LEFT SIDEBAR: API LIST -->
+    <div class="sidebar">
+      <div class="search-box">
+        <i class="pi pi-search"></i>
+        <input type="text" placeholder="Search APIs..." [(ngModel)]="searchQuery" (ngModelChange)="filterApis()" />
+      </div>
+      
+      <div class="api-list">
+        <ng-container *ngIf="filteredApis.length === 0">
+          <div class="empty-state">No APIs found matching your search.</div>
+        </ng-container>
+
+        <div *ngFor="let api of filteredApis" 
+             class="api-item" 
+             [class.active]="selectedApi?.id === api.id"
+             [class.integrated]="api.isIntegrated"
+             (click)="selectApi(api)">
+          <div class="api-icon">
+            <i class="pi" [ngClass]="api.icon"></i>
+          </div>
+          <div class="api-info">
+            <div class="api-name">{{ api.name }}</div>
+            <div class="api-cat">{{ api.category }}</div>
+          </div>
+          <i class="pi pi-chevron-right arrow-icon"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT CONTENT: FORM & RESULTS -->
+    <div class="main-content">
+      <ng-container *ngIf="selectedApi">
+          <app-hero
+             [title]="selectedApi.name"
+             [subtitle]="selectedApi.description"
+             [tag]="selectedApi.category"
+             [roleBadge]="selectedApi.isIntegrated ? 'Integrated' : 'Pending'"
+             [roleIcon]="selectedApi.isIntegrated ? 'pi-check-circle' : 'pi-clock'">
+          </app-hero>
+
+          <div class="dashboard-toolbar" *ngIf="selectedApi.isIntegrated; else notIntegrated">
+            <div class="toolbar-title">
+              <h3>API Parameters</h3>
+              <span>Fill in the required inputs to run the API</span>
+            </div>
+            
+            <div class="form-controls" style="display: flex; gap: 1rem; align-items: center;">
+              <div class="select-wrapper" *ngFor="let input of selectedApi.inputs">
+                <span class="dropdown-label">{{ input.label }}</span>
+                <input *ngIf="input.type === 'text'" type="text" [(ngModel)]="formPayload[input.key]" [placeholder]="'Enter ' + input.label" class="dashboard-select p-inputtext" style="padding: 0.6rem; border-radius: 8px; border: 1px solid var(--surface-border);" />
+                <select *ngIf="input.type === 'select'" [(ngModel)]="formPayload[input.key]" class="dashboard-select" style="padding: 0.6rem; border-radius: 8px; border: 1px solid var(--surface-border);">
+                  <option *ngFor="let opt of input.options" [value]="opt">{{ opt }}</option>
+                </select>
+              </div>
+              
+              <button class="verify-btn" (click)="runVerification()" [disabled]="loading" style="background: var(--primary-color); color: white; border: none; padding: 0.6rem 1.5rem; border-radius: 8px; font-weight: bold; cursor: pointer;">
+                <i class="pi" [ngClass]="loading ? 'pi-spin pi-spinner' : 'pi-verified'"></i>
+                {{ loading ? 'Verifying...' : 'Run' }}
+              </button>
+            </div>
+          </div>
+          
+          <ng-template #notIntegrated>
+            <div class="dashboard-toolbar" style="justify-content: center;">
+              <div class="not-integrated-message" style="display: flex; gap: 0.5rem; color: var(--text-color-secondary); font-weight: bold;">
+                <i class="pi pi-clock"></i>
+                <span>This API has not been integrated yet.</span>
+              </div>
+            </div>
+          </ng-template>
+
+        <div class="results-section">
+          <!-- Skeleton Loading -->
+          <div *ngIf="loading" class="skeleton-container">
+            <div class="skeleton-header"></div>
+            <div class="skeleton-grid">
+              <div class="skeleton-box"></div>
+              <div class="skeleton-box"></div>
+              <div class="skeleton-box"></div>
+              <div class="skeleton-box"></div>
+            </div>
+          </div>
+
+          <!-- Error State -->
+          <div *ngIf="resultError && !loading" class="error-container">
+            <i class="pi pi-times-circle"></i>
+            <div>
+              <h3>Verification Failed</h3>
+              <p>{{ resultError }}</p>
+            </div>
+          </div>
+
+          <!-- Results Presentation -->
+          <div *ngIf="result && !loading" class="data-container">
+            
+            <!-- UDYAM Output -->
+            <ng-container *ngIf="selectedApi.id === 'udyam'">
+              <div class="dashboard-panel">
+                <h3><i class="pi pi-building"></i> Enterprise Details</h3>
+                <div class="dashboard-grid-3col">
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Enterprise Name</label><span>{{ formatValue(result.main_details?.name_of_enterprise) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>UDYAM Number</label><span>{{ formatValue(result.uan) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Major Activity</label><span>{{ formatValue(result.main_details?.major_activity) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Organization Type</label><span>{{ formatValue(result.main_details?.organization_type) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Social Category</label><span>{{ formatValue(result.main_details?.social_category) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Date of Incorporation</label><span>{{ formatDate(result.main_details?.date_of_incorporation) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Registration Date</label><span>{{ formatDate(result.main_details?.registration_date) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Email</label><span>{{ formatValue(result.main_details?.email) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Mobile</label><span>{{ formatValue(result.main_details?.mobile_number) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>State</label><span>{{ formatValue(result.main_details?.state) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>DIC</label><span>{{ formatValue(result.main_details?.dic_name) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>MSME Office</label><span>{{ formatValue(result.main_details?.msme_dfo) }}</span></div>
+                </div>
+              </div>
+              <div class="dashboard-panel">
+                <h3><i class="pi pi-map-marker"></i> Address</h3>
+                <div class="dashboard-grid-3col">
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Plot</label><span>{{ formatValue(result.main_details?.flat) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Building</label><span>{{ formatValue(result.main_details?.name_of_building) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Village</label><span>{{ formatValue(result.main_details?.village) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Landmark</label><span>{{ formatValue(result.main_details?.block) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Road</label><span>{{ formatValue(result.main_details?.road) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>City</label><span>{{ formatValue(result.main_details?.city) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>State</label><span>{{ formatValue(result.main_details?.state) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>PIN</label><span>{{ formatValue(result.main_details?.pin) }}</span></div>
+                </div>
+              </div>
+              <div class="dashboard-panel" *ngIf="result.location_of_plant_details?.length">
+                <h3><i class="pi pi-sitemap"></i> Plant Location</h3>
+                <div class="data-table-wrapper">
+                  <table>
+                    <thead><tr><th>Unit</th><th>District</th><th>State</th></tr></thead>
+                    <tbody>
+                      <tr *ngFor="let p of result.location_of_plant_details">
+                        <td>{{ formatValue(p.unit_name) }}</td>
+                        <td>{{ formatValue(p.district) }}</td>
+                        <td>{{ formatValue(p.state) }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="dashboard-panel" *ngIf="result.nic_code?.length">
+                <h3><i class="pi pi-tags"></i> NIC Details</h3>
+                <div class="data-table-wrapper">
+                  <table>
+                    <thead><tr><th>Activity Type</th><th>NIC 2</th><th>NIC 4</th><th>NIC 5</th></tr></thead>
+                    <tbody>
+                      <tr *ngFor="let n of result.nic_code">
+                        <td>{{ formatValue(n.activity_type) }}</td>
+                        <td>{{ formatValue(n.nic_2_digit) }}</td>
+                        <td>{{ formatValue(n.nic_4_digit) }}</td>
+                        <td>{{ formatValue(n.nic_5_digit) }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="dashboard-panel" *ngIf="result.main_details?.enterprise_type_list?.length">
+                <h3><i class="pi pi-list"></i> Classification</h3>
+                <div class="data-table-wrapper">
+                  <table>
+                    <thead><tr><th>Year</th><th>Enterprise Type</th><th>Classification Date</th></tr></thead>
+                    <tbody>
+                      <tr *ngFor="let e of result.main_details.enterprise_type_list">
+                        <td>{{ formatValue(e.classification_year) }}</td>
+                        <td>{{ formatValue(e.enterprise_type) }}</td>
+                        <td>{{ formatDate(e.classification_date) }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- GSTIN Output -->
+            <ng-container *ngIf="selectedApi.id === 'gstin'">
+              <div class="dashboard-panel">
+                <h3><i class="pi pi-info-circle"></i> Business Summary</h3>
+                <div class="dashboard-grid-3col">
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Business Name</label><span>{{ formatValue(result.business_name) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Legal Name</label><span>{{ formatValue(result.legal_name) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>GSTIN</label><span>{{ formatValue(result.gstin) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>PAN</label><span>{{ formatValue(result.pan_number) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Constitution</label><span>{{ formatValue(result.constitution_of_business) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Taxpayer Type</label><span>{{ formatValue(result.taxpayer_type) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>GST Status</label>
+                    <span [ngStyle]="{'color': result.gstin_status === 'Active' ? 'green' : 'red', 'font-weight': 'bold'}">{{ formatValue(result.gstin_status) }}</span>
+                  </div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Registration Date</label><span>{{ formatDate(result.date_of_registration) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Aadhaar Validation</label><span>{{ formatValue(result.aadhaar_validation) }} ({{ formatDate(result.aadhaar_validation_date) }})</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>E-Invoice Status</label><span>{{ formatValue(result.einvoice_status) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Field Visit Conducted</label><span>{{ formatValue(result.field_visit_conducted) }}</span></div>
+                </div>
+              </div>
+              <div class="dashboard-panel">
+                <h3><i class="pi pi-briefcase"></i> Operations</h3>
+                <div class="dashboard-grid-3col">
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;" *ngIf="result.nature_bus_activities"><label>Nature of Business</label><span>{{ result.nature_bus_activities.join(', ') }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Core Activity</label><span>{{ formatValue(result.nature_of_core_business_activity_description) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Annual Turnover</label><span>{{ formatValue(result.annual_turnover) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Cash Percentage</label><span>{{ formatValue(result.percentage_in_cash) }}</span></div>
+                </div>
+              </div>
+              <div class="dashboard-panel">
+                <h3><i class="pi pi-map-marker"></i> Contact & Jurisdiction</h3>
+                <div class="dashboard-grid-3col">
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;" style="grid-column: span 2"><label>Principal Address</label><span>{{ formatValue(result.contact_details?.principal?.address) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Email</label><span>{{ formatValue(result.contact_details?.principal?.email) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Mobile</label><span>{{ formatValue(result.contact_details?.principal?.mobile) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;" style="grid-column: span 2"><label>Central Jurisdiction</label><span>{{ formatValue(result.center_jurisdiction) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;" style="grid-column: span 2"><label>State Jurisdiction</label><span>{{ formatValue(result.state_jurisdiction) }}</span></div>
+                </div>
+              </div>
+              <div class="dashboard-panel" *ngIf="result.promoters?.length">
+                <h3><i class="pi pi-users"></i> Promoters</h3>
+                <ul>
+                  <li *ngFor="let p of result.promoters">{{ p }}</li>
+                </ul>
+              </div>
+            </ng-container>
+
+            <!-- Company CIN by Name -->
+            <ng-container *ngIf="selectedApi.id === 'cin_by_name'">
+              <div class="dashboard-panel" *ngIf="result.company_list?.length; else noCompanies">
+                <h3><i class="pi pi-list"></i> Matching Companies</h3>
+                <div class="data-table-wrapper">
+                  <table>
+                    <thead><tr><th>Company Name</th><th>CIN</th><th>Company Type</th></tr></thead>
+                    <tbody>
+                      <tr *ngFor="let c of result.company_list">
+                        <td>{{ formatValue(c.company_name) }}</td>
+                        <td>{{ formatValue(c.cin_number) }}</td>
+                        <td>{{ formatValue(c.company_type) }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <ng-template #noCompanies>
+                <div class="empty-state">No companies found matching that name.</div>
+              </ng-template>
+            </ng-container>
+
+            <!-- CIN to Company Details -->
+            <ng-container *ngIf="selectedApi.id === 'company_details'">
+              <div class="dashboard-panel">
+                <h3><i class="pi pi-info-circle"></i> Company Info</h3>
+                <div class="dashboard-grid-3col">
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;" style="grid-column: span 2"><label>Company Name</label><span>{{ formatValue(result.company_name) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>CIN</label><span>{{ formatValue(result.details?.company_info?.cin) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>ROC Code</label><span>{{ formatValue(result.details?.company_info?.roc_code) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Registration No</label><span>{{ formatValue(result.details?.company_info?.registration_number) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Category</label><span>{{ formatValue(result.details?.company_info?.company_category) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Class</label><span>{{ formatValue(result.details?.company_info?.class_of_company) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Subcategory</label><span>{{ formatValue(result.details?.company_info?.company_subcategory) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Status</label>
+                    <span [ngStyle]="{'color': result.details?.company_info?.company_status === 'Active' ? 'green' : 'red', 'font-weight': 'bold'}">{{ formatValue(result.details?.company_info?.company_status) }}</span>
+                  </div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Listed Status</label><span>{{ formatValue(result.details?.company_info?.listed_status) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Incorporation Date</label><span>{{ formatDate(result.details?.company_info?.date_of_incorporation) }}</span></div>
+                </div>
+              </div>
+              <div class="dashboard-panel">
+                <h3><i class="pi pi-dollar"></i> Capital Details</h3>
+                <div class="dashboard-grid-3col">
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Authorised Capital</label><span>{{ formatCapital(result.details?.company_info?.authorised_capital) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Paid-up Capital</label><span>{{ formatCapital(result.details?.company_info?.paid_up_capital) }}</span></div>
+                </div>
+              </div>
+              <div class="dashboard-panel">
+                <h3><i class="pi pi-map-marker"></i> Office</h3>
+                <div class="dashboard-grid-3col">
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;" style="grid-column: span 2"><label>Address</label><span>{{ formatValue(result.details?.company_info?.registered_address) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;" style="grid-column: span 2"><label>Email</label><span>{{ formatValue(result.details?.company_info?.email_id) }}</span></div>
+                </div>
+              </div>
+              <div class="dashboard-panel" *ngIf="result.details?.directors?.length">
+                <h3><i class="pi pi-users"></i> Directors</h3>
+                <div class="data-table-wrapper">
+                  <table>
+                    <thead><tr><th>Director Name</th><th>DIN</th><th>Start Date</th><th>Surrendered DIN</th></tr></thead>
+                    <tbody>
+                      <!-- deduplication done in TS via uniqueDirectors getter -->
+                      <tr *ngFor="let d of uniqueDirectors">
+                        <td>{{ formatValue(d.director_name) }}</td>
+                        <td>{{ formatValue(d.din_number) }}</td>
+                        <td>{{ formatDate(d.start_date) }}</td>
+                        <td>{{ formatValue(d.surrendered_din) }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="dashboard-panel">
+                <h3><i class="pi pi-check-square"></i> Compliance</h3>
+                <div class="dashboard-grid-3col">
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Last AGM Date</label><span>{{ formatDate(result.details?.company_info?.last_agm_date) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Balance Sheet Date</label><span>{{ formatDate(result.details?.company_info?.last_bs_date) }}</span></div>
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- DIN Details -->
+            <ng-container *ngIf="selectedApi.id === 'din'">
+              <div class="dashboard-panel">
+                <h3><i class="pi pi-user"></i> Director Info</h3>
+                <div class="dashboard-grid-3col">
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Full Name</label><span>{{ formatValue(result.full_name) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>DIN</label><span>{{ formatValue(result.din_number) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Father's Name</label><span>{{ formatValue(result.father_name) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Date of Birth</label><span>{{ formatDate(result.dob) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Nationality</label><span>{{ formatValue(result.nationality) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Status</label>
+                    <span [ngStyle]="{'color': result.din_status === 'Approved' ? 'green' : 'inherit'}">{{ formatValue(result.din_status) }}</span>
+                  </div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;" style="grid-column: span 2"><label>Present Address</label><span>{{ formatValue(result.present_address) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;" style="grid-column: span 2"><label>Permanent Address</label><span>{{ formatValue(result.permanent_address) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Email</label><span>{{ formatValue(result.email) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>PAN</label><span>{{ formatValue(result.pan_number) }}</span></div>
+                </div>
+              </div>
+              <div class="dashboard-panel" *ngIf="result.companies_associated?.length">
+                <h3><i class="pi pi-building"></i> Associated Companies</h3>
+                <ul>
+                  <li *ngFor="let c of result.companies_associated">{{ c.company_name }} ({{ c.cin_number }})</li>
+                </ul>
+              </div>
+            </ng-container>
+
+            <!-- DIN to Phone -->
+            <ng-container *ngIf="selectedApi.id === 'din_phone'">
+              <div class="dashboard-panel">
+                <h3><i class="pi pi-phone"></i> Contact Details</h3>
+                <div class="dashboard-grid-3col">
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>DIN</label><span>{{ formatValue(result.din_number) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Phone Number</label><span>{{ formatValue(result.phone_number) }}</span></div>
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- PAN to CIN -->
+            <ng-container *ngIf="selectedApi.id === 'pan_to_cin'">
+              <div class="dashboard-panel">
+                <h3><i class="pi pi-briefcase"></i> Company Mapping</h3>
+                <div class="dashboard-grid-3col">
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>PAN</label><span>{{ formatValue(result.pan_number || formPayload['pan_number']) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Company Name</label><span>{{ formatValue(result.company_name) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>CIN</label><span>{{ formatValue(result.cin_number) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Company Type</label><span>{{ formatValue(result.company_type) }}</span></div>
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- PAN to GSTIN -->
+            <ng-container *ngIf="selectedApi.id === 'pan_to_gstin'">
+              <div class="dashboard-panel">
+                <h3><i class="pi pi-file"></i> GSTIN Mapping</h3>
+                <div class="dashboard-grid-3col">
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>PAN</label><span>{{ formatValue(result.pan_number) }}</span></div>
+                </div>
+              </div>
+              <div class="dashboard-panel" *ngIf="result.gstin_list?.length">
+                <h3><i class="pi pi-list"></i> GSTIN List</h3>
+                <div class="data-table-wrapper">
+                  <table>
+                    <thead><tr><th>GSTIN</th><th>State</th><th>State Code</th><th>Status</th></tr></thead>
+                    <tbody>
+                      <tr *ngFor="let g of result.gstin_list">
+                        <td>{{ formatValue(g.gstin) }}</td>
+                        <td>{{ formatValue(g.state) }}</td>
+                        <td>{{ formatValue(g.state_code) }}</td>
+                        <td [ngStyle]="{'color': g.active_status === 'Active' ? 'green' : 'red'}">{{ formatValue(g.active_status) }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- RERA Details -->
+            <ng-container *ngIf="selectedApi.id === 'rera_details'">
+              <div class="dashboard-panel" *ngFor="let d of result.details">
+                <h3><i class="pi pi-home"></i> Registration Info: {{ formatValue(d.project_name || d.agent_name) }}</h3>
+                <div class="dashboard-grid-3col">
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Registration No</label><span>{{ formatValue(result.registration_number) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Type</label><span>{{ formatValue(result.registration_type) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>State</label><span>{{ formatValue(result.state_name) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Certificate No</label><span>{{ formatValue(d.certificate_number) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>District</label><span>{{ formatValue(d.district) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Promoter Name</label><span>{{ formatValue(d.promoter_name) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;" style="grid-column: span 2"><label>Project Address</label><span>{{ formatValue(d.project_address) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Registration Date</label><span>{{ formatDate(d.registration_date) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Approval Date</label><span>{{ formatDate(d.approved_date) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Completion Date</label><span>{{ formatDate(d.completion_date) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Expiry Date</label><span>{{ formatDate(d.expiry_date) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Contact</label><span>{{ formatValue(d.contact_number) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Email</label><span>{{ formatValue(d.agent_email || d.promoter_email) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Status</label><span>{{ formatValue(d.status) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;" style="grid-column: span 2" *ngIf="d.certificate_url">
+                    <label>Certificate</label>
+                    <a [href]="d.certificate_url" target="_blank" style="color: #4F46E5; text-decoration: none; font-weight: 600;"><i class="pi pi-external-link"></i> View Certificate</a>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- Karnataka Land Records -->
+            <ng-container *ngIf="selectedApi.id === 'karnataka_land'">
+              <div class="dashboard-panel">
+                <h3><i class="pi pi-map"></i> Property Info</h3>
+                <div class="dashboard-grid-3col">
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>District</label><span>{{ formatValue(result.district) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Taluka</label><span>{{ formatValue(result.taluka) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Hobli</label><span>{{ formatValue(result.hobli) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Village</label><span>{{ formatValue(result.village) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Khata No</label><span>{{ formatValue(result.khata_no) }}</span></div>
+                </div>
+              </div>
+              <div class="dashboard-panel" *ngIf="result.land_details?.length">
+                <h3><i class="pi pi-list"></i> Land Table</h3>
+                <div class="data-table-wrapper">
+                  <table>
+                    <thead><tr><th>Survey/Hissa</th><th>Owner</th><th>Area</th><th>Total Taxes</th></tr></thead>
+                    <tbody>
+                      <tr *ngFor="let l of result.land_details">
+                        <td>{{ formatValue(l.hissa_number) }}</td>
+                        <td>{{ formatValue(l.owner_name) }}</td>
+                        <td>{{ formatValue(l.area) }}</td>
+                        <td>{{ formatValue(l.total) }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="dashboard-panel" *ngIf="result.total_summary">
+                <h3><i class="pi pi-calculator"></i> Summary</h3>
+                <div class="dashboard-grid-3col">
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Total Area</label><span>{{ formatValue(result.total_summary.total_area) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Grand Total</label><span>{{ formatValue(result.total_summary.grand_total) }}</span></div>
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- Gujarat Land Records -->
+            <ng-container *ngIf="selectedApi.id === 'gujarat_land'">
+              <div class="dashboard-panel">
+                <h3><i class="pi pi-map"></i> Search Details</h3>
+                <div class="dashboard-grid-3col">
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>District</label><span>{{ formatValue(result.district) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Taluka</label><span>{{ formatValue(result.taluka) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Village</label><span>{{ formatValue(result.village) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Block Code</label><span>{{ formatValue(result.block_code) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Input Owner</label><span>{{ formatValue(result.input_owner_name) }}</span></div>
+                </div>
+              </div>
+              <div class="dashboard-panel" *ngIf="result.land_details?.length">
+                <h3><i class="pi pi-list"></i> Matching Records</h3>
+                <div class="data-table-wrapper">
+                  <table>
+                    <thead><tr><th>Khata</th><th>Owner</th><th>Gujarati Name</th><th>Match Score</th></tr></thead>
+                    <tbody>
+                      <tr *ngFor="let l of result.land_details">
+                        <td>{{ formatValue(l.khata_number) }}</td>
+                        <td>{{ formatValue(l.owner_name) }}</td>
+                        <td>{{ formatValue(l.owner_name_gujarati) }}</td>
+                        <td>
+                          <span [ngStyle]="{'color': l.name_match_score > 40 ? 'green' : 'orange'}">{{ l.name_match_score }}</span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="dashboard-panel" *ngIf="result.total_summary">
+                <h3><i class="pi pi-calculator"></i> Summary</h3>
+                <div class="dashboard-grid-3col">
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Total Area</label><span>{{ formatValue(result.total_summary.total_area) }}</span></div>
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;"><label>Assessment Amount</label><span>{{ formatValue(result.total_summary.assessment_amount) }}</span></div>
+                </div>
+              </div>
+            </ng-container>
+
+            <!-- Generic fallback if not matched explicitly -->
+            <ng-container *ngIf="!['udyam','gstin','cin_by_name','company_details','din','din_phone','pan_to_cin','pan_to_gstin','rera_details','karnataka_land','gujarat_land'].includes(selectedApi.id)">
+              <div class="dashboard-panel">
+                <h3><i class="pi pi-database"></i> Response Details</h3>
+                <div class="dashboard-grid-3col">
+                  <div class="data-item" style="background: var(--surface-ground); padding: 1rem; border-radius: 8px; border: 1px solid var(--surface-border); display: flex; flex-direction: column; gap: 0.5rem;" *ngFor="let item of result | keyvalue">
+                    <label>{{ formatKey(item.key.toString()) }}</label>
+                    <!-- formatValue() handles arrays/objects/nulls in TS -->
+                    <span>{{ formatValue(item.value) }}</span>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+
+          </div>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+</p-dialog>
+<p-toast></p-toast>

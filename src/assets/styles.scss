@@ -1,0 +1,935 @@
+@use './layout/layout.scss';
+@use 'primeicons/primeicons.css';
+@import 'primeflex/primeflex.css';
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Poppins:wght@400;500;600;700&display=swap');
+
+/* You can add global styles to this file, and also import other style files */
+
+/* Inter Font - Local (Static) */
+@font-face {
+  font-family: 'Inter';
+  src: url('./fonts/inter/static/Inter_18pt-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('./fonts/inter/static/Inter_18pt-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('./fonts/inter/static/Inter_18pt-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('./fonts/inter/static/Inter_18pt-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Marathi Font (Local Static - Poppins Unicode) */
+@font-face {
+  font-family: 'MarathiFont';
+  src: url('./fonts/Marathi/Poppins-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MarathiFont';
+  src: url('./fonts/Marathi/Poppins-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MarathiFont';
+  src: url('./fonts/Marathi/Poppins-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MarathiFont';
+  src: url('./fonts/Marathi/Poppins-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+html {
+  font-size: 15px;
+  height: 100%;
+}
+
+/* Apply Inter font globally */
+*:not(.pi) {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.pi {
+  font-family: 'primeicons' !important;
+}
+
+/* Apply Marathi Font globally when language is mr */
+body.lang-mr *:not(.pi) {
+  font-family: 'MarathiFont', 'Inter', -apple-system, sans-serif;
+  line-height: 1.5;
+}
+
+body.lang-mr {
+  font-family: 'MarathiFont', 'Inter', -apple-system, sans-serif !important;
+  line-height: 1.6 !important;
+}
+
+body.lang-mr .pi {
+  font-family: 'primeicons' !important;
+}
+
+/* Devanagari text-layout alignment fixes */
+body.lang-mr h1, 
+body.lang-mr h2, 
+body.lang-mr h3, 
+body.lang-mr h4, 
+body.lang-mr h5, 
+body.lang-mr h6, 
+body.lang-mr .question-main,
+body.lang-mr .font-medium.text-900,
+body.lang-mr .timeline-text,
+body.lang-mr .audit-comment-suggestion-item {
+  line-height: 1.6 !important;
+}
+
+body.lang-mr .question-card {
+  padding: 1.4rem !important;
+}
+
+body.lang-mr .answer-label,
+body.lang-mr label {
+  margin-bottom: 0.35rem !important;
+  display: inline-block;
+}
+
+body.lang-mr input, 
+body.lang-mr select, 
+body.lang-mr textarea {
+  padding: 0.5rem 0.75rem !important;
+}
+
+/* Prevent text selection during sidebar resize */
+body.sidebar-resizing {
+  user-select: none;
+  cursor: ew-resize !important;
+}
+
+body.sidebar-resizing * {
+  cursor: ew-resize !important;
+}
+
+.official-report-sheet {
+  background: #ffffff;
+  border: 1px solid #d7e1eb;
+  border-radius: 6px;
+  padding: .8rem;
+}
+
+.official-report-header {
+  margin-bottom: .65rem;
+}
+
+.official-report-brand-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.35rem;
+  padding-bottom: .2rem;
+  border-bottom: 1px solid #d9d9d9;
+}
+
+.official-report-logo {
+  display: inline-block;
+  width: 44mm;
+  height: 12mm;
+  background-color: #182433;
+  position: relative;
+}
+
+.official-report-logo::after {
+  content: '';
+  position: absolute;
+  left: 5mm;
+  bottom: -2.4mm;
+  width: 0;
+  height: 0;
+  border-left: 2.4mm solid transparent;
+  border-right: 2.4mm solid transparent;
+  border-top: 2.4mm solid #182433;
+}
+
+.official-report-bank {
+  min-width: 18rem;
+  text-align: right;
+}
+
+.official-report-meta {
+  margin-bottom: 1.35rem;
+}
+
+.official-report-header p {
+  margin: 0;
+  color: #102a43;
+  font-size: .86rem;
+  line-height: 1.35;
+}
+
+.official-report-header strong {
+  font-weight: 800;
+}
+
+.print-only {
+  display: none !important;
+}
+
+.official-report-table-wrap {
+  overflow: auto;
+  border: 1px solid #d7e1eb;
+}
+
+.official-report-table {
+  width: 100%;
+  min-width: 1120px;
+  border-collapse: collapse;
+  font-size: .88rem;
+}
+
+.official-report-table th,
+.official-report-table td {
+  border: 1px solid #d7e1eb;
+  padding: .55rem .65rem;
+  vertical-align: top;
+  text-align: left;
+}
+
+.official-report-table th {
+  background: #eaf1f8;
+  color: #173a59;
+  font-size: .80rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+@media print {
+  @page {
+    size: A4 portrait !important;
+    margin: 5mm !important;
+  }
+
+  body.printing-report {
+    background: #ffffff !important;
+  }
+
+  body.printing-report .layout-topbar,
+  body.printing-report .layout-sidebar,
+  body.printing-report .layout-mask,
+  body.printing-report .page-header,
+  body.printing-report .no-print {
+    display: none !important;
+  }
+
+  body.printing-report .print-only {
+    display: block !important;
+  }
+
+  body.printing-report .layout-main-container,
+  body.printing-report .layout-main,
+  body.printing-report app-layout,
+  body.printing-report router-outlet {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    background: #ffffff !important;
+  }
+
+  body.printing-report .card,
+  body.printing-report .official-report-sheet {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  body.printing-report .official-report-sheet {
+    display: block;
+    border: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  body.printing-report .official-report-header {
+    margin-bottom: 10px;
+  }
+
+  body.printing-report .official-report-header p {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  body.printing-report .official-report-brand-row {
+    margin-bottom: 18px;
+    padding-bottom: 2px;
+    border-bottom: 1px solid #d9d9d9;
+  }
+
+  body.printing-report .official-report-logo {
+    display: inline-block !important;
+    width: 44mm !important;
+    height: 12mm !important;
+    background-color: #182433 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body.printing-report .official-report-bank {
+    min-width: 220px;
+    text-align: right;
+  }
+
+  body.printing-report .official-report-meta {
+    margin-bottom: 18px;
+  }
+
+  body.printing-report .official-report-table-wrap {
+    overflow: visible !important;
+    border: 0 !important;
+  }
+
+  body.printing-report .official-report-table {
+    min-width: 0 !important;
+    width: 100% !important;
+    font-size: 12px !important;
+  }
+
+  body.printing-report .official-report-table th,
+  body.printing-report .official-report-table td {
+    border: 1px solid #333 !important;
+    padding: 4px 5px !important;
+  }
+
+  body.printing-report .official-report-table th {
+    background: #e6e6e6 !important;
+    color: #000 !important;
+    font-size: 12px !important;
+  }
+
+  body.printing-report .official-report-table thead {
+    display: table-row-group !important;
+  }
+
+  body.printing-report .official-report-table .p-tag {
+    background: transparent !important;
+    border: 0 !important;
+    color: #000 !important;
+    padding: 0 !important;
+    font-size: inherit !important;
+    font-weight: 700 !important;
+  }
+
+  body.printing-report .risk-wise-report-table {
+    table-layout: fixed !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    font-size: 10px !important;
+  }
+
+  body.printing-report .risk-wise-report-table th,
+  body.printing-report .risk-wise-report-table td {
+    width: auto !important;
+    padding: 3px 4px !important;
+    font-size: 10px !important;
+    line-height: 1.25 !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    vertical-align: middle !important;
+  }
+
+  body.printing-report .risk-wise-report-table th {
+    font-size: 10px !important;
+  }
+
+  body.printing-report .report-account-table td,
+  body.printing-report .report-annexure-table th,
+  body.printing-report .report-annexure-table td {
+    font-size: 11px !important;
+    padding: 3px 4px !important;
+  }
+}
+
+/* Modern Compliance Pro Glassmorphism & UI Tokens */
+
+:root {
+  --primary-color: #4F46E5;
+  --primary-color-hover: #4338CA;
+  --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+
+  /* Remove PrimeNG focus-ring glow on all topbar buttons */
+  --p-button-danger-focus-ring-shadow: none;
+  --p-button-danger-focus-ring-color: transparent;
+  --p-button-focus-ring-shadow: none;
+  --p-button-focus-ring-color: transparent;
+  --p-button-focus-ring-width: 0;
+  --p-button-focus-ring-offset: 0;
+}
+
+body {
+  background: var(--bg-gradient);
+  background-attachment: fixed;
+}
+
+/* Glassmorphism Panels */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow: var(--glass-shadow);
+  padding: 2rem;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.glass-panel:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.1);
+}
+
+/* Dynamic Buttons */
+.btn-dynamic {
+  background: var(--primary-color);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2), 0 2px 4px -1px rgba(79, 70, 229, 0.1);
+}
+
+.btn-dynamic:hover {
+  background: var(--primary-color-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3), 0 4px 6px -2px rgba(79, 70, 229, 0.15);
+}
+
+.btn-dynamic:active {
+  transform: translateY(1px);
+}
+
+/* Gradient Text */
+.gradient-text {
+  background: linear-gradient(to right, #4F46E5, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 800;
+}
+
+/* Modern Inputs */
+.modern-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.9);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+
+.modern-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+}
+
+/* Table Enhancements */
+.modern-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.modern-table th {
+  background: rgba(243, 244, 246, 0.8);
+  padding: 1rem;
+  font-weight: 600;
+  text-align: left;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.modern-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  color: #4b5563;
+  transition: background 0.2s;
+}
+
+.modern-table tr:hover td {
+  background: rgba(249, 250, 251, 0.5);
+}
+
+/* Micro animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Force a clear vertical separation line between sidebar (shell) and the main content area */
+.layout-sidebar {
+  border-right: 1px solid var(--surface-border, #e2e8f0) !important;
+  box-shadow: 1px 0 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+/* ==========================================================================
+   Programmatic & Master Form Drawer Style Unification
+   ========================================================================== */
+.p-drawer, .p-sidebar, .form-drawer-host, .drawer-layout, .circular-drawer, .chat-drawer, .task-drawer {
+  background: var(--surface-card, #ffffff) !important;
+  
+  .p-drawer-header, .p-sidebar-header {
+    padding: 1rem 1.25rem 0.75rem !important;
+    border-bottom: 1px solid var(--surface-border, #e2e8f0) !important;
+    background: var(--surface-card, #ffffff) !important;
+    
+    .p-drawer-title, .p-sidebar-title {
+      font-weight: 700 !important;
+      font-size: 1.15rem !important;
+      color: var(--text-color) !important;
+    }
+  }
+
+  .p-drawer-content, .p-sidebar-content {
+    background: var(--surface-card, #ffffff) !important;
+    padding: 0 !important;
+  }
+
+  .p-drawer-footer, .p-sidebar-footer {
+    border-top: 1px solid var(--surface-border, #e2e8f0) !important;
+    background: var(--surface-card, #ffffff) !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+}
+
+.drawer-content-shell, .drawer-content {
+  padding: 1rem 1.35rem 1.25rem !important;
+  background: var(--surface-card, #ffffff) !important;
+}
+
+.drawer-footer-row {
+  padding: 1rem 1.5rem !important;
+  background: var(--surface-card, #ffffff) !important;
+  border-top: none !important;
+  box-shadow: none !important;
+}
+
+.drawer-layout, .circular-drawer, .chat-drawer, .task-drawer {
+  &.p-drawer {
+    background: var(--surface-card, #ffffff) !important;
+    
+    .p-drawer-content {
+      background: var(--surface-card, #ffffff) !important;
+    }
+    
+    .p-drawer-header {
+      background: var(--surface-card, #ffffff) !important;
+    }
+
+    .p-drawer-footer {
+      background: var(--surface-card, #ffffff) !important;
+    }
+  }
+}
+
+/* ==========================================================================
+   Global Responsive Layout & Reset Styles
+   ========================================================================== */
+
+@media (max-width: 767px) {
+  .p-drawer, .p-sidebar {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .p-drawer, .p-sidebar {
+    max-width: 80vw !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .p-dialog {
+    width: 100% !important;
+    max-width: 95vw !important;
+    margin: 0.5rem !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .card, .glass-panel {
+    padding: 1rem !important;
+    margin-bottom: 1rem !important;
+    border-radius: 8px !important;
+    width: 100% !important;
+    overflow-x: hidden !important;
+  }
+  
+  .glass-panel > div {
+    border-left: none !important;
+    padding-left: 0 !important;
+    border-top: 1px solid var(--surface-border, #f3f4f6);
+    padding-top: 1rem;
+    width: 100% !important;
+  }
+  
+  .glass-panel > div:first-child {
+    border-top: none !important;
+    padding-top: 0 !important;
+  }
+}
+
+@media (max-width: 991px) {
+  .flex-grow-1.overflow-hidden {
+    overflow: visible !important;
+  }
+  .h-full {
+    height: auto !important;
+  }
+  div[style*="height: calc(100vh"] {
+    height: auto !important;
+    overflow-y: visible !important;
+  }
+  .layout-main-container {
+    padding-top: 5rem !important;
+  }
+}
+
+/* ==========================================================================
+   Modern Premium Card Layout System (Workflow Cards)
+   ========================================================================== */
+
+.workflow-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.workflow-card {
+  position: relative;
+  background: var(--surface-card, #ffffff);
+  border: 1px solid var(--surface-border, #e2e8f0);
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 4px;
+    background: #cbd5e1;
+    border-top-left-radius: 12px;
+    border-bottom-left-radius: 12px;
+    transition: background-color 0.2s ease;
+  }
+
+  &:has(.bg-green-100)::before { background: #10b981; }
+  &:has(.bg-orange-100)::before { background: #f59e0b; }
+  &:has(.bg-blue-100)::before { background: #3b82f6; }
+  &:has(.bg-red-100)::before { background: #ef4444; }
+  &:has(.bg-indigo-100)::before { background: #6366f1; }
+
+  .border-round {
+    border-radius: 20px !important;
+    padding: 0.25rem 0.65rem !important;
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.3px;
+    text-transform: capitalize;
+  }
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+    border-color: #cbd5e1;
+  }
+}
+
+.workflow-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+  padding-left: 0.25rem;
+}
+
+.workflow-card-title {
+  font-size: 0.95rem;
+  font-weight: 650;
+  color: #0f172a;
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+}
+
+.workflow-card-body {
+  margin-bottom: 1.25rem;
+}
+
+.metadata-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  padding-left: 0.25rem;
+}
+
+.metadata-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  .meta-value-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #334155;
+    font-size: 0.82rem;
+    font-weight: 550;
+
+    i {
+      color: #94a3b8;
+      font-size: 0.85rem;
+    }
+  }
+}
+
+.metadata-label {
+  font-size: 0.65rem;
+  font-weight: 750;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metadata-value {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-color, #334155);
+}
+
+.workflow-card-footer {
+  border-top: 1px solid #f1f5f9;
+  padding-top: 0.95rem;
+  margin-top: 0.25rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+
+  button {
+    flex: 1;
+    min-width: max-content;
+    border-radius: 6px !important;
+    padding: 0.45rem 1rem !important;
+    font-size: 0.82rem !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease;
+
+    &.p-button-outlined {
+      border-color: #cbd5e1 !important;
+      color: #475569 !important;
+
+      &:hover {
+        background: #f8fafc !important;
+        border-color: #94a3b8 !important;
+      }
+    }
+
+    &:not(.p-button-outlined) {
+      background: var(--primary-color, #3b82f6) !important;
+      border-color: var(--primary-color, #3b82f6) !important;
+      color: #ffffff !important;
+
+      &:hover {
+        background: var(--primary-color-dark, #2563eb) !important;
+        border-color: var(--primary-color-dark, #2563eb) !important;
+        transform: translateY(-1px);
+      }
+    }
+  }
+}
+
+/* ==========================================================================
+   Compliance Pro Drawer & Form Layout Styles
+   ========================================================================== */
+.p-drawer-mask:not(.p-drawer-mask-active),
+.p-sidebar-mask:not(.p-sidebar-mask-active) {
+  pointer-events: none !important;
+  display: none !important;
+}
+
+.p-drawer, .p-sidebar, .drawer-layout {
+  background: var(--surface-card) !important;
+  
+  .p-drawer-header, .p-sidebar-header {
+    padding: 1rem 1.25rem 0.75rem !important;
+    border-bottom: 1px solid var(--surface-border, #e2e8f0) !important;
+    background: var(--surface-card) !important;
+    
+    .p-drawer-title, .p-sidebar-title {
+      font-weight: 700 !important;
+      font-size: 1.15rem !important;
+      color: var(--text-color) !important;
+    }
+  }
+
+  .p-drawer-content, .p-sidebar-content {
+    background: var(--surface-card) !important;
+    padding: 0 !important;
+  }
+
+  .p-drawer-footer, .p-sidebar-footer {
+    border-top: 1px solid var(--surface-border, #e2e8f0) !important;
+    background: var(--surface-card) !important;
+    padding: 0 !important;
+    box-shadow: 0 -8px 22px rgba(15, 23, 42, 0.06) !important;
+  }
+}
+
+.drawer-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+}
+
+.drawer-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.drawer-title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.65rem;
+  height: 2.65rem;
+  border-radius: 8px;
+  color: var(--primary-color, #4f46e5);
+  background: var(--primary-50, #eef2ff);
+  border: 1px solid var(--primary-100, #e0e7ff);
+  flex: 0 0 auto;
+  font-size: 1.2rem;
+}
+
+.drawer-footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 1rem 1.35rem;
+  background: var(--surface-card);
+}
+
+.drawer-footer-row button {
+  min-width: 8rem;
+}
+
+.drawer-content-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1rem 1.35rem 1.25rem;
+  background: var(--surface-card);
+}
+
+.drawer-section {
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border, #e2e8f0);
+  border-radius: 8px;
+  padding: 1rem 1rem 0.35rem;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.1rem;
+}
+
+.section-kicker {
+  color: var(--text-color, #334155);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.section-line {
+  flex: 1;
+  height: 1px;
+  background: var(--surface-border, #e2e8f0);
+}
+
+.drawer-form-grid {
+  row-gap: 0.65rem;
+}
+
+.drawer-form-grid .field {
+  margin-bottom: 0.85rem;
+}
+

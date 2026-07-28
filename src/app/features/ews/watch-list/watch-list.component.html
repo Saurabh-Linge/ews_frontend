@@ -1,0 +1,139 @@
+<p-toast></p-toast>
+
+<div class="card p-4">
+  <div class="flex align-items-center justify-content-between mb-4">
+    <h5 class="m-0 text-xl font-semibold" style="color: var(--text-color, #102a43); font-weight: 700;">Watch List</h5>
+  </div>
+
+  <!-- Detached Filters Bar -->
+  <div class="table-toolbar" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; justify-content: space-between; margin-bottom: 1.25rem;">
+    <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; flex: 1; align-items: flex-end;">
+      <!-- Search Input -->
+      <div style="display: flex; flex-direction: column; gap: 0.4rem; min-width: 220px; flex: 1;">
+        <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-color-secondary);">SEARCH</label>
+        <p-iconfield iconPosition="left" styleClass="w-full">
+          <p-inputicon styleClass="pi pi-search" />
+          <input
+            pInputText
+            type="text"
+            (input)="dt.filterGlobal($any($event.target).value, 'contains')"
+            placeholder="Search (Ctrl+F)"
+            class="w-full"
+            style="height: 2.5rem;"
+          />
+        </p-iconfield>
+      </div>
+
+      <!-- Branch Filter -->
+      <div style="display: flex; flex-direction: column; gap: 0.4rem; min-width: 160px;">
+        <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-color-secondary);">BRANCH</label>
+        <select [(ngModel)]="filterBranch" (change)="loadData()" class="modern-input" style="height: 2.5rem; padding: 0 0.75rem; border-radius: 8px; border: 1px solid var(--surface-border, #e2e8f0); background: var(--surface-card, #fff);">
+          <option [ngValue]="null">All Branches</option>
+          <option *ngFor="let b of branches()" [ngValue]="b">{{ b }}</option>
+        </select>
+      </div>
+
+      <!-- Risk Level Filter -->
+      <div style="display: flex; flex-direction: column; gap: 0.4rem; min-width: 140px;">
+        <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-color-secondary);">RISK LEVEL</label>
+        <select [(ngModel)]="filterRisk" (change)="loadData()" class="modern-input" style="height: 2.5rem; padding: 0 0.75rem; border-radius: 8px; border: 1px solid var(--surface-border, #e2e8f0); background: var(--surface-card, #fff);">
+          <option [ngValue]="null">All Risk Levels</option>
+          <option *ngFor="let r of risks" [ngValue]="r">{{ r }}</option>
+        </select>
+      </div>
+
+      <!-- Source Filter -->
+      <div style="display: flex; flex-direction: column; gap: 0.4rem; min-width: 140px;">
+        <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-color-secondary);">SOURCE</label>
+        <select [(ngModel)]="filterSource" (change)="loadData()" class="modern-input" style="height: 2.5rem; padding: 0 0.75rem; border-radius: 8px; border: 1px solid var(--surface-border, #e2e8f0); background: var(--surface-card, #fff);">
+          <option [ngValue]="null">All Sources</option>
+          <option *ngFor="let s of sources" [ngValue]="s">{{ s }}</option>
+        </select>
+      </div>
+
+      <!-- Status Filter -->
+      <div style="display: flex; flex-direction: column; gap: 0.4rem; min-width: 140px;">
+        <label style="font-size: 0.78rem; font-weight: 700; color: var(--text-color-secondary);">STATUS</label>
+        <select [(ngModel)]="filterStatus" (change)="loadData()" class="modern-input" style="height: 2.5rem; padding: 0 0.75rem; border-radius: 8px; border: 1px solid var(--surface-border, #e2e8f0); background: var(--surface-card, #fff);">
+          <option [ngValue]="null">All Statuses</option>
+          <option *ngFor="let st of statuses" [ngValue]="st">{{ st }}</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 0.5rem; align-items: flex-end;">
+      <button pButton pRipple label="Export" icon="pi pi-download" class="p-button-help p-button-outlined" (click)="downloadExcel()" style="height: 2.5rem;"></button>
+    </div>
+  </div>
+
+  <div *ngIf="loading()" style="padding: 60px; text-align: center; color: var(--text-color-secondary);">
+    <i class="pi pi-spin pi-spinner" style="font-size: 2rem; margin-bottom: 16px"></i>
+    <div>Loading Watch List...</div>
+  </div>
+
+  <!-- Data Table Container -->
+  <div class="table-container surface-card border-round-xl shadow-sm border-1 surface-border p-2" *ngIf="!loading()">
+    <p-table #dt [value]="accounts()" styleClass="p-datatable-sm p-datatable-striped" [paginator]="true" [rows]="15" [globalFilterFields]="['account_id', 'borrower_name', 'branch_name', 'loan_type', 'source', 'risk_level', 'status']">
+      <ng-template pTemplate="header">
+        <tr>
+          <th style="width: 90px; text-transform: uppercase; font-size: 0.775rem; font-weight: 700;">ACTION</th>
+          <th pSortableColumn="account_id" style="text-transform: uppercase; font-size: 0.775rem; font-weight: 700;">ACC NO <p-sortIcon field="account_id"></p-sortIcon></th>
+          <th pSortableColumn="borrower_name" style="text-transform: uppercase; font-size: 0.775rem; font-weight: 700;">BORROWER <p-sortIcon field="borrower_name"></p-sortIcon></th>
+          <th pSortableColumn="branch_name" style="text-transform: uppercase; font-size: 0.775rem; font-weight: 700;">BRANCH <p-sortIcon field="branch_name"></p-sortIcon></th>
+          <th pSortableColumn="loan_type" style="text-transform: uppercase; font-size: 0.775rem; font-weight: 700;">LOAN TYPE <p-sortIcon field="loan_type"></p-sortIcon></th>
+          <th pSortableColumn="signal_count" style="text-transform: uppercase; font-size: 0.775rem; font-weight: 700;">SIGNALS <p-sortIcon field="signal_count"></p-sortIcon></th>
+          <th pSortableColumn="source" style="text-transform: uppercase; font-size: 0.775rem; font-weight: 700;">SOURCE <p-sortIcon field="source"></p-sortIcon></th>
+          <th pSortableColumn="risk_level" style="text-transform: uppercase; font-size: 0.775rem; font-weight: 700;">RISK <p-sortIcon field="risk_level"></p-sortIcon></th>
+          <th pSortableColumn="status" style="text-transform: uppercase; font-size: 0.775rem; font-weight: 700;">STATUS <p-sortIcon field="status"></p-sortIcon></th>
+          <th pSortableColumn="days_on_list" style="text-transform: uppercase; font-size: 0.775rem; font-weight: 700;">DAYS <p-sortIcon field="days_on_list"></p-sortIcon></th>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="body" let-acc>
+        <tr>
+          <td>
+            <button pButton icon="pi pi-eye" label="Review" class="p-button-text p-button-sm p-button-info" (click)="review(acc)"></button>
+          </td>
+          <td style="font-family: monospace; font-weight: 700; color: var(--text-color);">{{ acc.account_id }}</td>
+          <td style="font-weight: 600;">{{ acc.borrower_name }}</td>
+          <td>{{ acc.branch_name }}</td>
+          <td style="color: var(--text-color-secondary);">{{ acc.loan_type }}</td>
+          <td>
+            <button pButton class="p-button-outlined p-button-sm p-button-secondary" (click)="openSignalsModal(acc.signals_data)">
+              <i class="pi pi-exclamation-triangle" style="margin-right: 4px;" [style.color]="acc.signal_count >= 3 ? '#ef4444' : '#f59e0b'"></i>
+              {{ acc.signal_count || 0 }} Signals
+            </button>
+          </td>
+          <td>
+            <span class="border-round" [ngClass]="{'bg-blue-100 text-blue-700': acc.source === 'CBS', 'bg-purple-100 text-purple-700': acc.source === 'Audit', 'bg-amber-100 text-amber-700': acc.source === 'Manual'}" style="font-weight: 700; padding: 4px 10px; border-radius: 99px;">
+              {{ acc.source }}
+            </span>
+          </td>
+          <td>
+            <span class="border-round" [ngClass]="{'bg-red-100 text-red-700': acc.risk_level === 'High', 'bg-amber-100 text-amber-700': acc.risk_level === 'Medium', 'bg-green-100 text-green-700': acc.risk_level === 'Low'}" style="font-weight: 700; padding: 4px 10px; border-radius: 99px;">
+              {{ acc.risk_level }}
+            </span>
+          </td>
+          <td>
+            <span class="border-round bg-gray-100 text-gray-700" style="font-weight: 600; padding: 4px 10px; border-radius: 99px;">{{ acc.status }}</span>
+          </td>
+          <td>
+            <span style="font-size: 0.85rem; font-weight: 700;" [style.color]="acc.days_on_list > 30 ? '#ef4444' : 'var(--text-color-secondary)'">{{ acc.days_on_list }}d</span>
+          </td>
+        </tr>
+      </ng-template>
+
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="10" style="text-align: center; padding: 2.5rem; color: var(--text-color-secondary);">No accounts on watch list.</td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </div>
+</div>
+
+<app-signals-modal 
+  [show]="showSignalsModal" 
+  [signalsData]="selectedSignalsData" 
+  (close)="showSignalsModal = false">
+</app-signals-modal>

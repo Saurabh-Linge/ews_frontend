@@ -1,0 +1,88 @@
+<p-toast></p-toast>
+
+<div class="card">
+  <div class="flex align-items-center justify-content-between mb-4">
+    <h5 class="m-0 text-xl font-semibold" style="color: var(--text-color, #102a43); font-weight: 700;">Risk Questionnaire Master</h5>
+  </div>
+
+  <app-table
+    [data]="questions()"
+    [columns]="tableColumns"
+    [loading]="loadingTable"
+    [actions]="tableActions"
+    (onAdd)="openNew()"
+    [showRefreshButton]="true"
+    [paginator]="true"
+    [rows]="10"
+    (onRefresh)="load()"
+  ></app-table>
+</div>
+
+<!-- Slide-over Drawer for Question Create / Edit Form -->
+<p-drawer
+  [visible]="showDrawer()"
+  (visibleChange)="showDrawer.set($event)"
+  position="right"
+  [style]="{ width: '520px', maxWidth: '96vw' }"
+  [modal]="true"
+  [dismissible]="true"
+  [showCloseIcon]="false"
+  styleClass="drawer-layout"
+  appendTo="body"
+>
+  <ng-template pTemplate="header">
+    <div class="drawer-header-row" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+      <div class="drawer-title-wrap" style="display: flex; align-items: center; gap: 0.75rem;">
+        <span class="drawer-title-icon" style="width: 2.25rem; height: 2.25rem; border-radius: 8px; background: rgba(59, 130, 246, 0.1); color: #2563eb; display: flex; align-items: center; justify-content: center;">
+          <i class="pi pi-question-circle" style="font-size: 1.1rem;"></i>
+        </span>
+        <div>
+          <div class="text-900 font-semibold text-xl" style="font-weight: 700; font-size: 1.15rem; color: var(--text-color);">{{ isEdit ? 'Edit Question' : 'New Question' }}</div>
+          <div class="text-600 text-sm mt-1" style="font-size: 0.82rem; color: var(--text-color-secondary);">Configure risk assessment questionnaire properties</div>
+        </div>
+      </div>
+      <button pButton pRipple type="button" icon="pi pi-times" class="p-button-text p-button-rounded" (click)="hideDrawer()"></button>
+    </div>
+  </ng-template>
+
+  <ng-template pTemplate="content">
+    <div class="drawer-content-shell" style="padding-top: 1.25rem; display: flex; flex-direction: column; gap: 1.25rem;">
+      <div class="field">
+        <label class="font-bold text-sm text-gray-700 mb-1 block" style="font-size: 0.85rem; font-weight: 700; color: var(--text-color);">Question Description <span class="text-red-500">*</span></label>
+        <input pInputText [(ngModel)]="form.question_desc" placeholder="Enter the exact question to be asked" class="w-full" style="height: 2.5rem; width: 100%; border-radius: 8px;" />
+      </div>
+
+      <div class="field">
+        <label class="font-bold text-sm text-gray-700 mb-1 block" style="font-size: 0.85rem; font-weight: 700; color: var(--text-color);">Reference Name (for Rules) <span class="text-red-500">*</span></label>
+        <input pInputText [(ngModel)]="form.reference_name" placeholder="e.g. is_gst_default" class="w-full" style="height: 2.5rem; width: 100%; font-family: monospace; border-radius: 8px;" />
+      </div>
+      
+      <div class="field">
+        <label class="font-bold text-sm text-gray-700 mb-1 block" style="font-size: 0.85rem; font-weight: 700; color: var(--text-color);">Answer Type <span class="text-red-500">*</span></label>
+        <p-select [options]="types" [(ngModel)]="form.type" appendTo="body" styleClass="w-full" style="width: 100%; border-radius: 8px;"></p-select>
+      </div>
+
+      <div class="field" *ngIf="form.type === 'list'">
+        <label class="font-bold text-sm text-gray-700 mb-1 block" style="font-size: 0.85rem; font-weight: 700; color: var(--text-color);">List Options (One per line)</label>
+        <textarea pTextarea [ngModel]="form.options.join('\n')" (ngModelChange)="updateOptions($event)" placeholder="Paste your options here, one per line..." rows="5" class="w-full" style="border-radius: 8px; font-size: 0.85rem; resize: vertical; padding: 0.75rem; width: 100%;"></textarea>
+      </div>
+
+      <div class="field">
+        <label class="font-bold text-sm text-gray-700 mb-1 block" style="font-size: 0.85rem; font-weight: 700; color: var(--text-color);">Target Loan Products</label>
+        <p-multiSelect [options]="loanProductsOptions()" [(ngModel)]="form.loan_products" optionLabel="label" optionValue="value" [showToggleAll]="true" [filter]="true" filterPlaceHolder="Search products..." placeholder="Select products (Leave empty for All)" appendTo="body" styleClass="w-full" style="width: 100%; border-radius: 8px;"></p-multiSelect>
+      </div>
+
+      <div class="field">
+        <label class="font-bold text-sm text-gray-700 mb-1 block" style="font-size: 0.85rem; font-weight: 700; color: var(--text-color);">Status</label>
+        <p-select [options]="[{label: 'Active', value: true}, {label: 'Inactive', value: false}]" [(ngModel)]="form.is_active" optionLabel="label" optionValue="value" appendTo="body" styleClass="w-full" style="width: 100%; border-radius: 8px;"></p-select>
+      </div>
+    </div>
+  </ng-template>
+
+  <ng-template pTemplate="footer">
+    <div class="drawer-footer-row" style="display: flex; justify-content: flex-end; gap: 0.75rem; width: 100%; padding-top: 0.5rem;">
+      <button pButton pRipple label="Cancel" icon="pi pi-times" class="p-button-outlined p-button-secondary" (click)="hideDrawer()"></button>
+      <button pButton pRipple [label]="saving ? 'Saving...' : 'Save Question'" icon="pi pi-check" class="p-button-primary" (click)="save()" [disabled]="saving"></button>
+    </div>
+  </ng-template>
+</p-drawer>

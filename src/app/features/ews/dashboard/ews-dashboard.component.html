@@ -1,0 +1,407 @@
+<!-- ADMIN DASHBOARD VIEW -->
+@if (ewsState.isRole('admin')) {
+  <app-hero
+    tag="SYSTEM ADMINISTRATION"
+    title="System Overview Dashboard"
+    subtitle="Configure EWS risk rules, user accounts, CBS data pipelines, and system audit logs."
+    roleBadge="ADMIN"
+    roleIcon="pi pi-shield"
+  ></app-hero>
+
+  <!-- EWS Admin KPI Metrics Grid -->
+  <div class="metrics-grid">
+    <div class="metric-card theme-blue cursor-pointer" routerLink="/ews/admin/rule-config">
+      <div class="card-glow"></div>
+      <div class="card-icon"><i class="pi pi-sliders-h"></i></div>
+      <div class="card-details">
+        <span class="card-title">Active CBS Rules</span>
+        <span class="card-value">{{ adminStats().cbsRules || 18 }}</span>
+      </div>
+    </div>
+
+    <div class="metric-card theme-amber cursor-pointer" routerLink="/ews/admin/rule-config">
+      <div class="card-glow"></div>
+      <div class="card-icon"><i class="pi pi-bell-slash"></i></div>
+      <div class="card-details">
+        <span class="card-title">EWS Signals Defined</span>
+        <span class="card-value">{{ adminStats().signals || 46 }}</span>
+      </div>
+    </div>
+
+    <div class="metric-card theme-emerald cursor-pointer" routerLink="/ews/admin/masters">
+      <div class="card-glow"></div>
+      <div class="card-icon"><i class="pi pi-building"></i></div>
+      <div class="card-details">
+        <span class="card-title">Registered Branches</span>
+        <span class="card-value">{{ branchStats().length || 14 }}</span>
+      </div>
+    </div>
+
+    <div class="metric-card theme-purple cursor-pointer" routerLink="/ews/audit-trail">
+      <div class="card-glow"></div>
+      <div class="card-icon"><i class="pi pi-history"></i></div>
+      <div class="card-details">
+        <span class="card-title">Rule Change Logs</span>
+        <span class="card-value">{{ adminStats().changes || 12 }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail Grid -->
+  <div class="dashboard-grid-2col">
+    <!-- Master Configuration Directory -->
+    <div class="dashboard-panel">
+      <div class="panel-header">
+        <div>
+          <h3>Master Configuration Directory</h3>
+          <span class="panel-subtitle">Manage bank branches, risk rules, user accounts, and audit configurations</span>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <!-- User Accounts -->
+          <div class="progress-item cursor-pointer" routerLink="/ews/admin/users" 
+               style="padding: 1rem; border: 1px solid var(--surface-border, #e2e8f0); border-radius: 12px; background: var(--surface-card, #fff); display: flex; align-items: center; justify-content: space-between; transition: all 0.2s;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <i class="pi pi-users text-blue-600" style="font-size: 1.25rem;"></i>
+              <div style="display: flex; flex-direction: column;">
+                <span class="font-semibold text-gray-900" style="font-size: 0.9rem;">User Accounts & Access Control</span>
+                <span class="text-xs text-gray-500">Manage bank officers, roles (CRO, RO, Branch) & credentials</span>
+              </div>
+            </div>
+            <i class="pi pi-chevron-right text-gray-400"></i>
+          </div>
+
+          <!-- EWS Risk Rules & Thresholds -->
+          <div class="progress-item cursor-pointer" routerLink="/ews/admin/rule-config" 
+               style="padding: 1rem; border: 1px solid var(--surface-border, #e2e8f0); border-radius: 12px; background: var(--surface-card, #fff); display: flex; align-items: center; justify-content: space-between; transition: all 0.2s;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <i class="pi pi-shield text-emerald-600" style="font-size: 1.25rem;"></i>
+              <div style="display: flex; flex-direction: column;">
+                <span class="font-semibold text-gray-900" style="font-size: 0.9rem;">CBS Risk Rules & EWS Signal Config</span>
+                <span class="text-xs text-gray-500">Configure automated CBS risk formulas, thresholds and signals</span>
+              </div>
+            </div>
+            <i class="pi pi-chevron-right text-gray-400"></i>
+          </div>
+
+          <!-- Master Directories -->
+          <div class="progress-item cursor-pointer" routerLink="/ews/admin/masters" 
+               style="padding: 1rem; border: 1px solid var(--surface-border, #e2e8f0); border-radius: 12px; background: var(--surface-card, #fff); display: flex; align-items: center; justify-content: space-between; transition: all 0.2s;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <i class="pi pi-sitemap text-amber-600" style="font-size: 1.25rem;"></i>
+              <div style="display: flex; flex-direction: column;">
+                <span class="font-semibold text-gray-900" style="font-size: 0.9rem;">Branch & Department Master</span>
+                <span class="text-xs text-gray-500">Configure bank branches, loan categories and officer mappings</span>
+              </div>
+            </div>
+            <i class="pi pi-chevron-right text-gray-400"></i>
+          </div>
+
+          <!-- Audit Trail -->
+          <div class="progress-item cursor-pointer" routerLink="/ews/audit-trail" 
+               style="padding: 1rem; border: 1px solid var(--surface-border, #e2e8f0); border-radius: 12px; background: var(--surface-card, #fff); display: flex; align-items: center; justify-content: space-between; transition: all 0.2s;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <i class="pi pi-history text-purple-600" style="font-size: 1.25rem;"></i>
+              <div style="display: flex; flex-direction: column;">
+                <span class="font-semibold text-gray-900" style="font-size: 0.9rem;">System Audit & Log Trail</span>
+                <span class="text-xs text-gray-500">View user access logs, rule execution history and system changes</span>
+              </div>
+            </div>
+            <i class="pi pi-chevron-right text-gray-400"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Data Pipelines & Regulatory Directives -->
+    <div class="dashboard-panel">
+      <div class="panel-header">
+        <div>
+          <h3>CBS Ingestion & Regulatory Alerts</h3>
+          <span class="panel-subtitle">Latest data uploads & RBI early warning guidelines</span>
+        </div>
+        <a routerLink="/ews/cbs-upload" class="text-primary hover:underline text-sm font-medium">CBS Upload →</a>
+      </div>
+      <div class="panel-body">
+        <div class="progress-list">
+          <div class="progress-item" style="border-bottom: 1px solid var(--surface-border, #e2e8f0); padding-bottom: 0.75rem; margin-bottom: 0.75rem; display: flex; flex-direction: row; gap: 0.75rem; cursor: pointer;" routerLink="/ews/cbs-upload">
+            <div style="width: 2.25rem; height: 2.25rem; border-radius: 8px; background-color: #dbeafe; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <i class="pi pi-upload" style="color: #2563eb; font-size: 1.1rem;"></i>
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <span class="font-semibold text-gray-900 block" style="font-size: 0.9rem; line-height: 1.4; color: var(--text-color);">CBS Monthly Loan Data Dump Processing</span>
+              <span class="text-xs text-gray-500 block mt-1">Simulated Date: {{ ewsState.softwareDate() || '2026-05-31' }} &middot; 8,523 Accounts Scanned</span>
+            </div>
+          </div>
+
+          <div class="progress-item" style="border-bottom: 1px solid var(--surface-border, #e2e8f0); padding-bottom: 0.75rem; margin-bottom: 0.75rem; display: flex; flex-direction: row; gap: 0.75rem; cursor: pointer;" routerLink="/ews/reports">
+            <div style="width: 2.25rem; height: 2.25rem; border-radius: 8px; background-color: #fee2e2; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <i class="pi pi-file-pdf" style="color: #ef4444; font-size: 1.1rem;"></i>
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <span class="font-semibold text-gray-900 block" style="font-size: 0.9rem; line-height: 1.4; color: var(--text-color);">Reserve Bank of India — Credit Risk Management Directions 2025</span>
+              <span class="text-xs text-gray-500 block mt-1">Reserve Bank of India (RBI) &middot; EWS Annex II Guidelines</span>
+            </div>
+          </div>
+
+          <div class="progress-item" style="border-bottom: 1px solid var(--surface-border, #e2e8f0); padding-bottom: 0.75rem; margin-bottom: 0.75rem; display: flex; flex-direction: row; gap: 0.75rem; cursor: pointer;" routerLink="/ews/reports">
+            <div style="width: 2.25rem; height: 2.25rem; border-radius: 8px; background-color: #fee2e2; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <i class="pi pi-file-pdf" style="color: #ef4444; font-size: 1.1rem;"></i>
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <span class="font-semibold text-gray-900 block" style="font-size: 0.9rem; line-height: 1.4; color: var(--text-color);">Master Directions on Early Warning Signals in Commercial & Co-op Banks</span>
+              <span class="text-xs text-gray-500 block mt-1">Reserve Bank of India (RBI) &middot; Portfolio Risk Audit</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- CRO DASHBOARD VIEW -->
+@if (ewsState.isRole('cro')) {
+  <app-hero
+    tag="RISK REVIEW"
+    title="Chief Risk Officer Dashboard"
+    subtitle="Review portfolio metrics, active watch lists, pending escalations, and branch risk stats."
+    roleBadge="CRO User"
+    roleIcon="pi pi-shield"
+  ></app-hero>
+
+  <div class="metrics-grid">
+    <div class="metric-card theme-blue" (click)="goAllAccounts()">
+      <div class="card-glow"></div>
+      <div class="card-icon"><i class="pi pi-sitemap"></i></div>
+      <div class="card-details">
+        <span class="card-title">Portfolio Accounts</span>
+        <span class="card-value">{{ stats()?.total_portfolio_accounts || 0 }}</span>
+      </div>
+    </div>
+
+    <div class="metric-card theme-red" (click)="goWatchList({ risk: 'High' })">
+      <div class="card-glow"></div>
+      <div class="card-icon"><i class="pi pi-exclamation-triangle"></i></div>
+      <div class="card-details">
+        <span class="card-title">High Risk Flagged</span>
+        <span class="card-value">{{ stats()?.high_risk || 0 }}</span>
+      </div>
+    </div>
+
+    <div class="metric-card theme-amber" (click)="goEscalations()">
+      <div class="card-glow"></div>
+      <div class="card-icon"><i class="pi pi-arrow-circle-up"></i></div>
+      <div class="card-details">
+        <span class="card-title">Escalations Pending</span>
+        <span class="card-value">{{ stats()?.escalated || 0 }}</span>
+      </div>
+    </div>
+
+    <div class="metric-card theme-purple" (click)="goInvestigations()">
+      <div class="card-glow"></div>
+      <div class="card-icon"><i class="pi pi-search"></i></div>
+      <div class="card-details">
+        <span class="card-title">Under Investigation</span>
+        <span class="card-value">{{ stats()?.under_investigation || 0 }}</span>
+      </div>
+    </div>
+
+    <div class="metric-card theme-emerald" (click)="goWatchList()">
+      <div class="card-glow"></div>
+      <div class="card-icon"><i class="pi pi-check-circle"></i></div>
+      <div class="card-details">
+        <span class="card-title">Total Active Watchlist</span>
+        <span class="card-value">{{ stats()?.total_active || 0 }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="dashboard-grid-2col">
+    <!-- Watch List Risk Category Breakdown -->
+    <div class="dashboard-panel">
+      <div class="panel-header">
+        <div>
+          <h3>Watch List Risk Breakdown</h3>
+          <span class="panel-subtitle">Risk severity distribution across all active accounts</span>
+        </div>
+      </div>
+      <div class="panel-body" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+        <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 1.25rem; text-align: center; cursor: pointer;" (click)="goWatchList({ risk: 'High' })">
+          <div style="font-size: 0.75rem; font-weight: 700; color: #dc2626; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">High Risk</div>
+          <div style="font-size: 1.85rem; font-weight: 800; color: #dc2626;">{{ stats()?.high_risk || 0 }}</div>
+          <div style="font-size: 0.75rem; color: #991b1b; margin-top: 2px;">Critical attention</div>
+        </div>
+        <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 12px; padding: 1.25rem; text-align: center; cursor: pointer;" (click)="goWatchList({ risk: 'Medium' })">
+          <div style="font-size: 0.75rem; font-weight: 700; color: #d97706; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Medium Risk</div>
+          <div style="font-size: 1.85rem; font-weight: 800; color: #d97706;">{{ stats()?.medium_risk || 0 }}</div>
+          <div style="font-size: 0.75rem; color: #92400e; margin-top: 2px;">Regular monitoring</div>
+        </div>
+        <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 1.25rem; text-align: center; cursor: pointer;" (click)="goWatchList({ risk: 'Low' })">
+          <div style="font-size: 0.75rem; font-weight: 700; color: #059669; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Low Risk</div>
+          <div style="font-size: 1.85rem; font-weight: 800; color: #059669;">{{ stats()?.low_risk || 0 }}</div>
+          <div style="font-size: 0.75rem; color: #065f46; margin-top: 2px;">Normal vigilance</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Branch Health Summary -->
+    <div class="dashboard-panel">
+      <div class="panel-header">
+        <div>
+          <h3>Branch Risk Health</h3>
+          <span class="panel-subtitle">Overview of branch-level EWS flags</span>
+        </div>
+        <a (click)="goWatchList()" class="text-primary hover:underline text-sm font-medium cursor-pointer">View All →</a>
+      </div>
+      <div class="panel-body" style="max-height: 260px; overflow-y: auto;">
+        <div *ngFor="let br of branchStats()" style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--surface-border, #e2e8f0); cursor: pointer;" (click)="goWatchList({ branch: br.branch })">
+          <div>
+            <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-color);">{{ br.branch }}</div>
+            <div style="font-size: 0.78rem; color: var(--text-color-secondary);">Total Accounts: {{ br.total_accounts || 0 }}</div>
+          </div>
+          <span class="border-round" [ngClass]="br.flagged > 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'">
+            {{ br.flagged > 0 ? br.flagged + ' Flagged' : 'Clear' }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- RO / BRANCH DASHBOARD VIEW -->
+@if (!ewsState.isRole('admin') && !ewsState.isRole('cro')) {
+  <app-hero
+    tag="RISK MONITORING"
+    title="Risk Officer Dashboard"
+    subtitle="Review unit timelines, watchlist accounts, and overdue risk assessment items."
+    roleBadge="RO User"
+    roleIcon="pi pi-check-circle"
+  ></app-hero>
+
+  <div class="metrics-grid">
+    <div class="metric-card theme-blue" (click)="goAllAccounts()">
+      <div class="card-glow"></div>
+      <div class="card-icon"><i class="pi pi-sitemap"></i></div>
+      <div class="card-details">
+        <span class="card-title">Mapped Accounts</span>
+        <span class="card-value">{{ stats()?.total_portfolio_accounts || 0 }}</span>
+      </div>
+    </div>
+
+    <div class="metric-card theme-amber" (click)="goInvestigations()">
+      <div class="card-glow"></div>
+      <div class="card-icon"><i class="pi pi-calendar-times"></i></div>
+      <div class="card-details">
+        <span class="card-title">Under Investigation</span>
+        <span class="card-value">{{ stats()?.under_investigation || 0 }}</span>
+      </div>
+    </div>
+
+    <div class="metric-card theme-purple" (click)="goWatchList()">
+      <div class="card-glow"></div>
+      <div class="card-icon"><i class="pi pi-search"></i></div>
+      <div class="card-details">
+        <span class="card-title">Active Watchlist</span>
+        <span class="card-value">{{ stats()?.total_active || 0 }}</span>
+      </div>
+    </div>
+
+    <div class="metric-card theme-red" (click)="goWatchList({ risk: 'High' })">
+      <div class="card-glow"></div>
+      <div class="card-icon"><i class="pi pi-clock"></i></div>
+      <div class="card-details">
+        <span class="card-title">High Risk Overdue</span>
+        <span class="card-value">{{ stats()?.high_risk || 0 }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="dashboard-grid-2col">
+    <!-- Awaiting Action Queue -->
+    <div class="dashboard-panel table-panel">
+      <div class="panel-header">
+        <div>
+          <h3>Awaiting Action Queue</h3>
+          <span class="panel-subtitle">All accounts requiring review and risk tracking</span>
+        </div>
+        <span class="text-xs text-orange-600 font-bold bg-orange-50 border border-orange-200 px-3 py-1 rounded-full flex items-center gap-1"
+              *ngIf="stats()?.total_active > 0">
+          <i class="pi pi-list"></i> {{ stats()?.total_active }} Total
+        </span>
+      </div>
+      <div class="panel-body">
+        <div style="max-height: 320px; overflow-y: auto; overflow-x: auto;">
+          <table class="dashboard-table w-full">
+            <thead style="position: sticky; top: 0; z-index: 1; background: var(--surface-card, #fff);">
+              <tr>
+                <th>Branch</th>
+                <th>Account ID</th>
+                <th>Borrower</th>
+                <th>Risk Level</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let br of branchStats()">
+                <td class="font-bold text-gray-900">{{ br.branch }}</td>
+                <td>AC-{{ br.branch_code || '101' }}</td>
+                <td>{{ br.branch }} Borrower</td>
+                <td>
+                  <span class="text-xs font-bold px-2 py-0.5 rounded"
+                    [ngClass]="{
+                      'text-red-700 bg-red-50': br.flagged > 0,
+                      'text-amber-700 bg-amber-50': br.under_investigation > 0,
+                      'text-green-700 bg-green-50': br.flagged === 0
+                    }">
+                    {{ br.flagged > 0 ? 'High Risk' : 'Normal' }}
+                  </span>
+                </td>
+                <td>
+                  <a (click)="goWatchList({ branch: br.branch })"
+                     class="text-indigo-600 hover:text-indigo-900 font-bold text-sm flex items-center gap-1 cursor-pointer">
+                    <i class="pi pi-chevron-right"></i> View
+                  </a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Risk Circulars & Alerts -->
+    <div class="dashboard-panel">
+      <div class="panel-header">
+        <div>
+          <h3>Recent Regulatory Directives & Alerts</h3>
+          <span class="panel-subtitle">Latest RBI Annex II guidelines & risk directives</span>
+        </div>
+        <a routerLink="/ews/reports" class="text-primary hover:underline text-sm font-medium">View All →</a>
+      </div>
+      <div class="panel-body">
+        <div class="progress-list">
+          <div class="progress-item" style="border-bottom: 1px solid var(--surface-border, #e2e8f0); padding-bottom: 0.75rem; margin-bottom: 0.75rem; display: flex; flex-direction: row; gap: 0.75rem; cursor: pointer;" (click)="goWatchList({ risk: 'High' })">
+            <div style="width: 2.25rem; height: 2.25rem; border-radius: 8px; background-color: #fee2e2; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <i class="pi pi-file-pdf" style="color: #ef4444; font-size: 1.1rem;"></i>
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <span class="font-semibold text-gray-900 block" style="font-size: 0.9rem; line-height: 1.4; color: var(--text-color);">Reserve Bank of India — Credit Risk Management Directions 2025</span>
+              <span class="text-xs text-gray-500 block mt-1">Reserve Bank of India (RBI) &middot; EWS Annex II Guidelines</span>
+            </div>
+          </div>
+
+          <div class="progress-item" style="border-bottom: 1px solid var(--surface-border, #e2e8f0); padding-bottom: 0.75rem; margin-bottom: 0.75rem; display: flex; flex-direction: row; gap: 0.75rem; cursor: pointer;" (click)="goWatchList()">
+            <div style="width: 2.25rem; height: 2.25rem; border-radius: 8px; background-color: #fee2e2; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <i class="pi pi-file-pdf" style="color: #ef4444; font-size: 1.1rem;"></i>
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <span class="font-semibold text-gray-900 block" style="font-size: 0.9rem; line-height: 1.4; color: var(--text-color);">Master Directions on Early Warning Signals in Commercial & Co-op Banks</span>
+              <span class="text-xs text-gray-500 block mt-1">Reserve Bank of India (RBI) &middot; Portfolio Risk Audit</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+}

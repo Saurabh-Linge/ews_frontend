@@ -1,0 +1,8 @@
+.ews-filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+.ews-filter-sel { font-size: 12px; }
+.ews-sig-count { background: #F3F4F6; color: #374151; padding: 2px 8px; border-radius: 20px; font-weight: 700; font-size: 12px; }
+.ews-sig-count.high { background: #FEF2F2; color: #DC2626; }
+.ews-src { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
+.ews-src.src-audit { background: #F5F3FF; color: #7C3AED; }
+.ews-src.src-cbs { background: #EEF2FF; color: #1B4FD8; }
+.ews-src.src-manual { background: #FFFBEB; color: #D97706; }

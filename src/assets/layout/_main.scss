@@ -1,0 +1,23 @@
+.layout-main-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    justify-content: space-between;
+    --layout-content-gutter: 0.75rem;
+    padding: 4rem var(--layout-content-gutter) 0 var(--layout-content-gutter); // topbar + compact page gutter
+    transition: margin-left var(--layout-section-transition-duration);
+    background: #eef3f7;
+}
+
+.layout-main-container.no-transition {
+    transition: none !important;
+}
+
+.layout-main {
+    flex: 1 1 auto;
+    padding-bottom: 0.5rem;
+}
+
+img {
+    max-width: none !important;
+}

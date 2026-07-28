@@ -1,0 +1,145 @@
+<!-- src/app/shared/components/audit-unit-dashboard/audit-unit-dashboard.component.html -->
+
+<section class="audit-dashboard-page">
+  <header class="dashboard-header">
+    <div class="dashboard-header__content">
+      <p class="dashboard-eyebrow">{{ eyebrow }}</p>
+      <h1>{{ title }}</h1>
+      <span>{{ subtitle }}</span>
+    </div>
+  </header>
+
+  <section class="dashboard-toolbar" aria-label="Audit unit filters">
+    <div class="filter-field filter-field--search">
+      <label>Search audit unit</label>
+
+      <span class="search-control">
+        <i class="pi pi-search"></i>
+
+        <input
+          pInputText
+          type="text"
+          [ngModel]="search"
+          (ngModelChange)="onSearchChange($event)"
+          placeholder="Audit unit name or code"
+        />
+      </span>
+    </div>
+
+    <div class="filter-field">
+      <label>Status</label>
+
+      <p-select
+        [options]="statusOptions"
+        [ngModel]="selectedStatus"
+        (ngModelChange)="onStatusChange($event)"
+        optionLabel="label"
+        optionValue="value"
+        placeholder="All Status"
+        [showClear]="true"
+        styleClass="dashboard-select"
+      ></p-select>
+    </div>
+  </section>
+
+  <section class="summary-strip">
+    <article *ngFor="let metric of summaryMetrics()">
+      <span>{{ metric.label }}</span>
+      <strong [ngClass]="metric.className || ''">{{ metric.value }}</strong>
+    </article>
+  </section>
+
+  <section class="unit-grid-panel">
+    <div class="table-titlebar">
+      <div>
+        <h2>{{ panelTitle }}</h2>
+        <span> {{ units.length }} unit{{ units.length === 1 ? '' : 's' }} found </span>
+      </div>
+
+      <button
+        pButton
+        type="button"
+        icon="pi pi-refresh"
+        [label]="refreshLabel"
+        severity="secondary"
+        class="p-button-outlined p-button-secondary"
+        [disabled]="loading"
+        (click)="onRefresh()"
+      ></button>
+    </div>
+
+    <div *ngIf="!loading && units.length === 0" class="empty-state">
+      <i class="pi pi-inbox"></i>
+      <strong>{{ emptyTitle }}</strong>
+      <span>{{ emptyMessage }}</span>
+    </div>
+
+    <div *ngIf="loading" class="unit-grid">
+      <article class="unit-card unit-card--loading" *ngFor="let item of [1, 2, 3, 4, 5, 6]">
+        <p-skeleton width="68%" height="1.1rem"></p-skeleton>
+        <p-skeleton width="42%" height="0.8rem"></p-skeleton>
+        <p-skeleton width="100%" height="3.6rem"></p-skeleton>
+        <p-skeleton width="7rem" height="2rem"></p-skeleton>
+      </article>
+    </div>
+
+    <div *ngIf="!loading && units.length > 0" class="unit-grid">
+      <article
+        class="unit-card"
+        [class.unit-card--compact]="unitCardMetrics().length < 4"
+        tabindex="0"
+        role="button"
+        *ngFor="let item of units"
+        (click)="onOpenUnit(item)"
+        (keydown.enter)="onOpenUnit(item)"
+        (keydown.space)="onOpenUnit(item)"
+      >
+        <div class="unit-card__top">
+          <div class="unit-card__title">
+            <span>Audit Unit</span>
+            <h3>{{ item.audit_unit_name }}</h3>
+            <small>Code: {{ item.audit_unit_code }}</small>
+
+            <div class="unit-card__meta" *ngIf="cardMetaItems?.length">
+              <small *ngFor="let meta of cardMetaItems">
+                <strong>{{ meta.label }}:</strong> {{ item[meta.key] || '-' }}
+              </small>
+            </div>
+          </div>
+
+          <p-tag
+            [value]="item.latest_status || 'NOT STARTED'"
+            [severity]="getSeverity(item.latest_status)"
+          ></p-tag>
+        </div>
+
+        <div class="unit-card__metrics" [class.unit-card__metrics--compact]="unitCardMetrics().length < 4">
+          <div *ngFor="let metric of unitCardMetrics()">
+            <span>{{ metric.label }}</span>
+            <strong [ngClass]="metric.className || ''">{{ item[metric.key] || 0 }}</strong>
+          </div>
+        </div>
+
+        <div class="unit-card__footer">
+          <span>
+            <ng-container *ngIf="item.not_started_count > 0; else readyToOpen">
+              {{ item.not_started_count }} audit{{ item.not_started_count === 1 ? '' : 's' }} not
+              started
+            </ng-container>
+
+            <ng-template #readyToOpen>Ready to open</ng-template>
+          </span>
+
+          <button
+            type="button"
+            class="unit-open-btn"
+            aria-label="Open audit unit"
+            (click)="$event.stopPropagation(); onOpenUnit(item)"
+          >
+            <i class="pi pi-arrow-right"></i>
+          </button>
+        </div>
+      </article>
+    </div>
+  </section>
+</section>
