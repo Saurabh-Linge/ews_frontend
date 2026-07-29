@@ -1,118 +1,153 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { ToastModule } from 'primeng/toast';
+import { MessageService } from 'primeng/api';
 import { EwsStateService } from '../services/ews-state.service';
 import { EwsApiService } from '../services/ews-api.service';
 import { SignalsModalComponent } from '../components/signals-modal/signals-modal.component';
-import { TableModule } from 'primeng/table';
-import { InputTextModule } from 'primeng/inputtext';
-import { HeroComponent } from '../../../shared/components/ui/hero/hero';
+import { TableComponent, TableColumn, TableAction } from '../../../shared/components/table/table.component';
 
 @Component({
   selector: 'app-investigations',
   standalone: true,
-  imports: [CommonModule, SignalsModalComponent, TableModule, InputTextModule, HeroComponent],
+  imports: [
+    CommonModule, 
+    ToastModule,
+    SignalsModalComponent, 
+    TableComponent
+  ],
+  providers: [MessageService],
   template: `
-    <div class="mb-4">
-      <h2 class="m-0 text-2xl font-bold text-gray-900" style="color: var(--text-color, #0f172a); font-size: 1.5rem; font-weight: 800;">Investigations</h2>
-      <p class="mt-1 text-sm text-gray-500" style="color: var(--text-color-secondary, #64748b); font-size: 0.875rem; margin-top: 0.25rem;">Monitor accounts currently under investigation and branch responses.</p>
-    </div>
-    <div class="ews-page">
-      <div *ngIf="loading()" style="padding: 60px; text-align: center; color: var(--muted);">
-        <i class="pi pi-spin pi-spinner" style="font-size: 2rem; margin-bottom: 16px"></i>
-        <div>Loading investigations...</div>
-      </div>
+    <p-toast></p-toast>
 
-      <div class="card" *ngIf="!loading()">
-        <div class="card-header" style="display:flex; justify-content: space-between; align-items: center;">
-          <div>
-            <h3 style="margin: 0;">Active investigations {{ ewsState.isRole('cro') ? '— bank-wide' : '' }}</h3>
-            <span class="tag tag-blue" style="margin-top: 4px; display: inline-block;">{{ investigations().length }} accounts</span>
-          </div>
-          <span class="p-input-icon-left">
-            <i class="pi pi-search"></i>
-            <input pInputText type="text" (input)="dt.filterGlobal($any($event.target).value, 'contains')" placeholder="Search investigations..." style="font-size: 12px; width: 250px" />
+    <div class="card p-4">
+      <div class="flex flex-column sm:flex-row align-items-start sm:align-items-center justify-content-between gap-3 mb-4 pb-3 border-bottom-1 surface-border">
+        <div>
+          <h5 class="m-0 text-xl font-bold" style="color: var(--text-color, #102a43); font-weight: 700;">
+            Active Investigations {{ ewsState.isRole('cro') ? '— Bank-wide' : '' }}
+          </h5>
+          <p class="m-0 mt-1 text-sm text-gray-500">Monitor accounts currently under investigation and branch responses.</p>
+        </div>
+        <div class="flex align-items-center gap-2">
+          <span class="px-3 py-1 font-bold text-xs border-round bg-blue-100 text-blue-700">
+            {{ investigations().length }} Active Accounts
           </span>
         </div>
-        <div style="padding: 0;">
-          <p-table #dt [value]="investigations()" styleClass="p-datatable-sm p-datatable-striped" [paginator]="true" [rows]="10" [globalFilterFields]="['account_id', 'borrower_name', 'branch', 'status']">
-            <ng-template pTemplate="header">
-              <tr>
-                <th pSortableColumn="account_id">Acc. <p-sortIcon field="account_id"></p-sortIcon></th>
-                <th pSortableColumn="borrower_name">Borrower <p-sortIcon field="borrower_name"></p-sortIcon></th>
-                <th pSortableColumn="branch">Branch <p-sortIcon field="branch"></p-sortIcon></th>
-                <th pSortableColumn="sent_at">Sent on <p-sortIcon field="sent_at"></p-sortIcon></th>
-                <th>Signals</th>
-                <th pSortableColumn="status">Branch response <p-sortIcon field="status"></p-sortIcon></th>
-                <th pSortableColumn="days_open">Days <p-sortIcon field="days_open"></p-sortIcon></th>
-                <th style="width: 100px">Action</th>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-inv>
-              <tr>
-                <td style="font-weight:600">{{ inv.account_id }}</td>
-                <td>{{ inv.borrower_name }}</td>
-                <td>{{ inv.branch }}</td>
-                <td style="font-size:12px;color:#6B7280">{{ inv.sent_at | date:'shortDate' }}</td>
-                <td>
-                  <button class="btn btn-xs" style="background:transparent; border:1px solid var(--border); color:var(--primary); font-weight:600;" (click)="openSignalsModal(inv.signals_data)">
-                    <i class="pi pi-exclamation-triangle" style="margin-right:4px; color:var(--red);"></i>
-                    View Signals
-                  </button>
-                </td>
-                <td>
-                  <span class="tag" [ngClass]="{
-                    'tag-grn': inv.status === 'Branch responded',
-                    'tag-amb': inv.status === 'Pending',
-                    'tag-red': inv.status === 'Overdue'
-                  }">{{ inv.status }}</span>
-                </td>
-                <td [style.color]="inv.days_open > 7 ? 'var(--red)' : ''" [style.font-weight]="inv.days_open > 7 ? '600' : 'normal'">
-                  {{ inv.days_open || 0 }}d
-                </td>
-                <td>
-                  @if (ewsState.isRole('ro') && inv.days_open > 7) {
-                    <button class="btn btn-xs btn-red" (click)="forceEscalate(inv)">Escalate to CRO</button>
-                  } @else if (ewsState.isRole('ro') && inv.status === 'Pending') {
-                    <button class="btn btn-xs" (click)="remind(inv)">Remind</button>
-                  } @else {
-                    <button class="btn btn-xs btn-primary" (click)="view(inv)">Review</button>
-                  }
-                </td>
-              </tr>
-            </ng-template>
-            <ng-template pTemplate="emptymessage">
-              <tr>
-                <td colspan="8" style="text-align: center; padding: 32px; color: var(--muted);">No active investigations found.</td>
-              </tr>
-            </ng-template>
-          </p-table>
-        </div>
       </div>
 
-      <app-signals-modal 
-        [show]="showSignalsModal" 
-        [signalsData]="selectedSignalsData" 
-        (close)="showSignalsModal = false">
-      </app-signals-modal>
+      <app-table
+        [data]="formattedData()"
+        [columns]="tableColumns"
+        [loading]="loading()"
+        [actions]="tableActions"
+        [showAddButton]="false"
+        [showRefreshButton]="true"
+        [showExportButton]="true"
+        [paginator]="true"
+        [rows]="10"
+        (onRefresh)="loadData()"
+        (onActionClick)="handleActionClick($event)"
+      ></app-table>
     </div>
-  `,
+
+    <app-signals-modal 
+      [show]="showSignalsModal" 
+      [signalsData]="selectedSignalsData" 
+      (close)="showSignalsModal = false">
+    </app-signals-modal>
+  `
 })
 export class InvestigationsComponent implements OnInit {
   ewsApi = inject(EwsApiService);
   ewsState = inject(EwsStateService);
   router = inject(Router);
+  msg = inject(MessageService);
+
   loading = signal(true);
   investigations = signal<any[]>([]);
 
   showSignalsModal = false;
   selectedSignalsData: any[] = [];
 
+  formattedData = computed(() => {
+    return this.investigations().map(inv => ({
+      ...inv,
+      signals_btn: true
+    }));
+  });
+
+  tableColumns: TableColumn[] = [
+    { field: 'account_id', header: 'ACC NO', sortable: true, width: '140px' },
+    { field: 'borrower_name', header: 'BORROWER', sortable: true },
+    { field: 'branch', header: 'BRANCH', sortable: true, width: '160px' },
+    { field: 'sent_at', header: 'SENT ON', sortable: true, type: 'date', width: '130px' },
+    { 
+      field: 'signals_btn', 
+      header: 'SIGNALS', 
+      type: 'boolean_action', 
+      booleanActionTrueIcon: 'pi pi-bell', 
+      booleanActionTrueLabel: '',
+      booleanActionTrueClass: 'p-button-danger p-button-text text-red-600',
+      actionName: 'view_signals',
+      tooltip: 'View Signals',
+      width: '90px',
+      align: 'center',
+      headerAlign: 'center'
+    },
+    { field: 'status', header: 'BRANCH RESPONSE', sortable: true, type: 'badge', width: '170px' },
+    { field: 'days_open', header: 'DAYS', sortable: true, width: '100px' }
+  ];
+
+  tableActions: TableAction[] = [
+    {
+      label: 'Escalate',
+      icon: 'pi pi-angle-double-up',
+      styleClass: 'p-button-danger',
+      visible: (row) => this.ewsState.isRole('ro') && (row.days_open > 7 || row.status === 'Overdue'),
+      command: (row) => this.forceEscalate(row)
+    },
+    {
+      label: 'Remind',
+      icon: 'pi pi-bell',
+      styleClass: 'p-button-warning',
+      visible: (row) => this.ewsState.isRole('ro') && row.status === 'Pending' && !(row.days_open > 7),
+      command: (row) => this.remind(row)
+    },
+    {
+      label: 'Review',
+      icon: 'pi pi-eye',
+      styleClass: 'p-button-primary',
+      command: (row) => this.view(row)
+    }
+  ];
+
   ngOnInit() {
+    this.loadData();
+  }
+
+  loadData() {
+    this.loading.set(true);
     this.ewsApi.getInvestigations().subscribe({
-      next: (d: any) => { if (d.length) this.investigations.set(d); this.loading.set(false); },
-      error: () => this.loading.set(false),
+      next: (d: any) => { 
+        if (d && Array.isArray(d)) {
+          this.investigations.set(d); 
+        } else {
+          this.investigations.set([]);
+        }
+        this.loading.set(false); 
+      },
+      error: () => {
+        this.investigations.set([]);
+        this.loading.set(false);
+      }
     });
+  }
+
+  handleActionClick(event: { name: string; row: any }) {
+    if (event.name === 'view_signals') {
+      this.openSignalsModal(event.row.signals_data);
+    }
   }
 
   openSignalsModal(signalsData: any[]) {
@@ -120,26 +155,35 @@ export class InvestigationsComponent implements OnInit {
     this.showSignalsModal = true;
   }
 
-  view(inv: any) { this.router.navigate(['/ews/account', inv.watch_list_id]); }
+  view(inv: any) { 
+    this.router.navigate(['/ews/account', inv.watch_list_id || inv.account_id]); 
+  }
   
   forceEscalate(inv: any) {
+    if (!confirm(`Are you sure you want to force escalate account ${inv.account_id} to CRO?`)) return;
     this.ewsApi.escalate({
       watch_list_id: inv.watch_list_id,
       reason: 'Force escalated by RO due to prolonged inactivity or high risk',
       escalated_by: 'Risk Officer'
     }).subscribe({
       next: () => {
-        alert(`Account ${inv.account_id} force escalated to CRO.`);
-        this.ngOnInit();
+        this.msg.add({ severity: 'success', summary: 'Escalated', detail: `Account ${inv.account_id} force escalated to CRO.` });
+        this.loadData();
       },
-      error: (e: any) => alert('Failed to escalate: ' + (e.error?.message || 'Server Error'))
+      error: (e: any) => {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: 'Failed to escalate: ' + (e.error?.message || 'Server Error') });
+      }
     });
   }
 
   remind(inv: any) {
     this.ewsApi.sendReminder(inv.investigation_id || inv.id, 'Risk Officer').subscribe({
-      next: () => alert(`Reminder sent to ${inv.branch} Branch for account ${inv.account_id}.`),
-      error: (e: any) => alert('Failed to send reminder: ' + (e.error?.message || 'Server Error'))
+      next: () => {
+        this.msg.add({ severity: 'success', summary: 'Reminder Sent', detail: `Reminder sent to ${inv.branch} Branch for account ${inv.account_id}.` });
+      },
+      error: (e: any) => {
+        this.msg.add({ severity: 'error', summary: 'Error', detail: 'Failed to send reminder: ' + (e.error?.message || 'Server Error') });
+      }
     });
   }
 }

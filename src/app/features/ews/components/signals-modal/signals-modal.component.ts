@@ -1,70 +1,78 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HeroComponent } from '../../../../shared/components/ui/hero/hero';
+import { DrawerModule } from 'primeng/drawer';
+import { ButtonModule } from 'primeng/button';
 
 @Component({
   selector: 'app-signals-modal',
   standalone: true,
-  imports: [CommonModule, HeroComponent],
+  imports: [CommonModule, DrawerModule, ButtonModule],
   template: `
-    <app-hero title="Signals Modal"></app-hero>
-    <div class="modal-overlay" *ngIf="show" (click)="close.emit()">
-      <div class="dashboard-panel" style="width: 100%; max-width: 600px; max-height: 90vh; padding: 0; display: flex; flex-direction: column;" (click)="$event.stopPropagation()">
-        
-        <div style="background: linear-gradient(135deg, var(--primary-800, #1e3a8a) 0%, var(--primary-600, #3b82f6) 100%); padding: 1.5rem; border-top-left-radius: 16px; border-top-right-radius: 16px; display: flex; justify-content: space-between; align-items: center; color: white;">
-          <div>
-            <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700;">Signals & Trigger Rules</h3>
-            <span style="font-size: 0.85rem; opacity: 0.8;">The following signals triggered the EWS alert</span>
+    <p-drawer
+      [visible]="show"
+      (visibleChange)="$event ? null : close.emit()"
+      (onHide)="close.emit()"
+      position="right"
+      [style]="{ width: '560px', maxWidth: '96vw' }"
+      [modal]="true"
+      [dismissible]="true"
+      [showCloseIcon]="false"
+      styleClass="drawer-layout"
+      appendTo="body"
+    >
+      <ng-template pTemplate="header">
+        <div class="drawer-header-row flex align-items-center justify-content-between w-full">
+          <div class="drawer-title-wrap flex align-items-center gap-3">
+            <span class="drawer-title-icon flex align-items-center justify-content-center border-round-lg bg-red-50 text-red-600" style="width: 40px; height: 40px; min-width: 40px;">
+              <i class="pi pi-exclamation-triangle text-xl"></i>
+            </span>
+            <div>
+              <div class="text-900 font-bold text-xl">Signals & Trigger Rules</div>
+              <div class="text-600 text-sm mt-1">The following signals triggered the EWS alert</div>
+            </div>
           </div>
-          <button class="close-btn" (click)="close.emit()"><i class="pi pi-times"></i></button>
+          <button pButton pRipple type="button" icon="pi pi-times" class="p-button-text p-button-rounded p-button-secondary" (click)="close.emit()"></button>
         </div>
+      </ng-template>
 
-        <div class="panel-body" style="padding: 1.5rem; overflow-y: auto;">
-          <div *ngIf="!signalsData || signalsData.length === 0" style="padding: 2rem; text-align: center; color: var(--text-color-secondary); border: 1px dashed var(--surface-border); border-radius: 12px; font-weight: 600;">
+      <ng-template pTemplate="content">
+        <div class="py-2">
+          <div *ngIf="!signalsData || signalsData.length === 0" class="p-4 text-center text-600 border-1 border-dashed surface-border border-round-xl font-medium">
+            <i class="pi pi-info-circle text-2xl text-400 mb-2 block"></i>
             No detailed rule data available for this account.
           </div>
 
-          <div class="signal-list">
-            <div *ngFor="let sig of signalsData" class="metric-card theme-red" style="padding: 1rem; border-radius: 12px; margin-bottom: 1rem; align-items: flex-start; flex-direction: column; gap: 0.75rem;">
-              <div class="card-glow"></div>
-              
-              <div style="display: flex; align-items: center; gap: 0.75rem; width: 100%;">
-                <div class="card-icon" style="width: 32px; height: 32px; font-size: 1rem;"><i class="pi pi-exclamation-triangle"></i></div>
-                <div class="card-details">
-                  <span class="card-title" style="font-size: 1rem; color: var(--text-color);">{{ sig.name }}</span>
+          <div class="flex flex-column gap-3" *ngIf="signalsData && signalsData.length > 0">
+            <div *ngFor="let sig of signalsData" class="surface-card border-1 surface-border border-round-xl p-3 shadow-xs">
+              <div class="flex align-items-center gap-3 mb-2">
+                <div class="flex align-items-center justify-content-center border-round-lg bg-red-100 text-red-700 font-bold" style="width: 32px; height: 32px; min-width: 32px;">
+                  <i class="pi pi-shield text-base"></i>
+                </div>
+                <span class="font-bold text-base text-900">{{ sig.name }}</span>
+              </div>
+
+              <div *ngIf="sig.rules && sig.rules.length > 0" class="flex flex-column gap-2 pl-4 mt-2">
+                <div *ngFor="let rule of sig.rules" class="flex align-items-center gap-2 surface-ground border-1 surface-border p-2.5 border-round-lg text-sm text-700">
+                  <i class="pi pi-check-circle text-green-500 flex-shrink-0"></i>
+                  <span class="font-medium">{{ rule.name || rule }}</span>
                 </div>
               </div>
-              
-              <div class="rules-list" *ngIf="sig.rules && sig.rules.length > 0" style="width: 100%; display: flex; flex-direction: column; gap: 0.5rem; padding-left: 2.75rem;">
-                <div *ngFor="let rule of sig.rules" class="rule-item" style="display: flex; align-items: center; gap: 0.5rem; background: var(--surface-ground); border: 1px solid var(--surface-border); padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.9rem; font-weight: 500; color: var(--text-color-secondary);">
-                  <i class="pi pi-check-circle" style="color: var(--emerald-500, #10B981);"></i>
-                  <span>{{ rule.name || rule }}</span>
-                </div>
-              </div>
-              
-              <div *ngIf="!sig.rules || sig.rules.length === 0" class="no-rules" style="padding-left: 2.75rem; font-size: 0.85rem; color: var(--text-color-secondary); font-style: italic;">
+
+              <div *ngIf="!sig.rules || sig.rules.length === 0" class="pl-4 text-xs text-500 font-italic mt-1">
                 Triggered automatically or manually without specific CBS rule details.
               </div>
             </div>
           </div>
         </div>
-        
-        <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--surface-border); background: var(--surface-ground); border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; text-align: right;">
-          <button class="verify-btn" (click)="close.emit()" style="background: var(--primary-color); color: white; border: none; padding: 0.5rem 1.5rem; border-radius: 8px; font-weight: bold; cursor: pointer;">Close</button>
+      </ng-template>
+
+      <ng-template pTemplate="footer">
+        <div class="flex justify-content-end w-full pt-3 border-top-1 surface-border">
+          <button pButton pRipple label="Close" icon="pi pi-times" class="p-button-outlined p-button-secondary" (click)="close.emit()"></button>
         </div>
-      </div>
-    </div>
-  `,
-  styles: [`
-    .modal-overlay {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.4); z-index: 1000;
-      display: flex; align-items: center; justify-content: center;
-      backdrop-filter: blur(4px);
-    }
-    .close-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: white; opacity: 0.7; transition: opacity 0.2s; }
-    .close-btn:hover { opacity: 1; }
-  `]
+      </ng-template>
+    </p-drawer>
+  `
 })
 export class SignalsModalComponent {
   @Input() show: boolean = false;

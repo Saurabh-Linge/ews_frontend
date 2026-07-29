@@ -6,32 +6,33 @@
     scrollbar-width: thin;
 }
 
-// Iconfield search input fix
-p-iconfield, .p-iconfield {
+// Search input field & icon vertical centering & padding
+.search-input-wrapper {
   position: relative;
   display: inline-flex;
   align-items: center;
 
-  .p-inputicon, i.pi-search {
+  .search-input-icon {
     position: absolute;
     left: 0.85rem;
     top: 50%;
     transform: translateY(-50%);
-    z-index: 2;
-    color: #64748b;
+    z-index: 3;
+    color: var(--text-color-secondary, #64748b);
+    font-size: 0.875rem;
     pointer-events: none;
-    font-size: 0.95rem !important;
-    line-height: 1 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    margin: 0 !important;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
-  input.p-inputtext, input {
-    padding-left: 2.35rem !important;
+  .search-input-field,
+  input.search-input-field {
     height: 2.5rem !important;
-    line-height: 2.5rem !important;
+    padding-left: 2.5rem !important;
+    padding-inline-start: 2.5rem !important;
+    font-size: 0.875rem;
   }
 }
 
@@ -64,7 +65,7 @@ p-iconfield, .p-iconfield {
         
         td,
         > td {
-            padding: var(--p-datatable-body-cell-padding, 0.4rem 0.65rem);
+            padding: var(--p-datatable-body-cell-padding);
             font-size: 0.8125rem;
             border-color: var(--p-datatable-body-cell-border-color);
             border-right: 1px solid var(--p-datatable-body-cell-border-color);
@@ -80,18 +81,6 @@ p-iconfield, .p-iconfield {
             color: var(--p-datatable-row-hover-color) !important;
         }
     }
-}
-
-// Compact Small Table override (matching Master Tables)
-.p-datatable.p-datatable-sm {
-  .p-datatable-thead > tr > th {
-    padding: 0.35rem 0.6rem !important;
-    font-size: 0.75rem !important;
-  }
-  .p-datatable-tbody > tr > td {
-    padding: 0.3rem 0.6rem !important;
-    font-size: 0.8125rem !important;
-  }
 }
 
 // Sticky header for scrollable tables
@@ -172,46 +161,6 @@ html, body {
   padding: 0.25rem;
   margin-bottom: 0.5rem;
   
-  app-select-field, .p-select {
-    height: 2.5rem !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    
-    .p-select-label {
-      font-size: 0.875rem !important;
-      padding: 0.45rem 0.75rem !important;
-      height: 2.5rem !important;
-      display: flex !important;
-      align-items: center !important;
-      line-height: 1.2 !important;
-    }
-
-    .p-select-dropdown {
-      height: 2.5rem !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-    }
-  }
-
-  button, .p-button {
-    height: 2.5rem !important;
-    padding: 0.45rem 0.85rem !important;
-    font-size: 0.875rem !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    white-space: nowrap !important;
-    
-    .p-button-icon {
-      font-size: 0.875rem !important;
-    }
-
-    .p-button-label {
-      white-space: nowrap !important;
-    }
-  }
-
   @media (max-width: 768px) {
     flex-direction: column;
     align-items: stretch;
@@ -224,11 +173,25 @@ html, body {
   flex-direction: row;
   align-items: center;
   gap: 0.5rem;
+  flex: 1;
+  flex-wrap: wrap;
+
+  .form-field {
+    margin-bottom: 0 !important;
+  }
+  
+  [toolbar-actions] {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
   
   @media (max-width: 768px) {
     width: 100%;
     
-    p-iconfield, input {
+    .search-input-wrapper, input {
       width: 100% !important;
     }
   }
@@ -252,7 +215,25 @@ html, body {
   }
 }
 
+// Enable horizontal scroll inside the table wrapper container
 ::ng-deep .p-datatable-table-container {
   overflow-x: auto !important;
   scrollbar-width: thin;
+}
+
+// Restrict default page scroll blocks and set safe column widths on mobile
+@media (max-width: 768px) {
+  ::ng-deep .p-datatable {
+    table {
+      table-layout: auto !important;
+    }
+    
+    th, td {
+      &:not([style*="width: 3rem"]):not([style*="width: 4rem"]):not([style*="width: 2.25rem"]):not(.p-selection-column) {
+        min-width: 140px !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+      }
+    }
+  }
 }

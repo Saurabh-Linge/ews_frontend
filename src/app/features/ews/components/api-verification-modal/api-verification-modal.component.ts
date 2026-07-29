@@ -2,7 +2,10 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule, KeyValuePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DialogModule } from 'primeng/dialog';
+import { DrawerModule } from 'primeng/drawer';
 import { ToastModule } from 'primeng/toast';
+import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
 import { MessageService } from 'primeng/api';
 import { ApiVerificationService } from '../../services/api-verification.service';
 import { catchError } from 'rxjs/operators';
@@ -34,7 +37,7 @@ import { MetricCardComponent } from '../../../../shared/components/ui/metric-car
 @Component({
   selector: 'app-api-verification-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, DialogModule, ToastModule, KeyValuePipe, HeroComponent, MetricCardComponent],
+  imports: [CommonModule, FormsModule, DrawerModule, DialogModule, ToastModule, ButtonModule, InputTextModule, KeyValuePipe, HeroComponent, MetricCardComponent],
   providers: [MessageService],
   templateUrl: './api-verification-modal.component.html',
   styleUrls: ['./api-verification-modal.component.scss'],

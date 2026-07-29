@@ -425,11 +425,12 @@ export class AllAccountsComponent implements OnInit {
     { label: 'Flagged in Watch List', value: 'flagged' },
     { label: 'Not Flagged', value: 'normal' }
   ];
+  branchesMap = new Map<string, string>();
 
   tableColumns: TableColumn[] = [
     { field: 'account_no', header: 'ACC NO', sortable: true },
     { field: 'long_name', header: 'BORROWER', sortable: true },
-    { field: 'branch_code', header: 'BRANCH', sortable: true },
+    { field: 'branch_name', header: 'BRANCH', sortable: true },
     { field: 'scheme_desc', header: 'LOAN TYPE', sortable: true },
     { field: 'tot_sanc_limit', header: 'SANCTIONED', sortable: true, type: 'currency', align: 'right' },
     { field: 'balance', header: 'BALANCE', sortable: true, type: 'currency', align: 'right' },
@@ -446,11 +447,19 @@ export class AllAccountsComponent implements OnInit {
   ngOnInit() {
     this.ewsApi.getBranches().subscribe({
       next: (data) => {
-        const opts = [{ label: 'All Branches', value: null }, ...data.map(b => ({ label: `${b.name} (${b.code})`, value: b.code }))];
+        const opts = [{ label: 'All Branches', value: null }, ...(data || []).map(b => ({ label: `${b.name} (${b.code || b.id})`, value: b.code || String(b.id) }))];
         this.branchOptions.set(opts);
-      }
+
+        (data || []).forEach(b => {
+          if (b.code) this.branchesMap.set(String(b.code), b.name);
+          if (b.id) this.branchesMap.set(String(b.id), b.name);
+          if (b.name) this.branchesMap.set(b.name, b.name);
+        });
+
+        this.loadData();
+      },
+      error: () => this.loadData()
     });
-    this.loadData();
   }
 
   onFilterChange() {
@@ -466,7 +475,11 @@ export class AllAccountsComponent implements OnInit {
 
     this.ewsApi.getAllAccounts(params).subscribe({
       next: (res) => {
-        this.accounts.set(res.data || []);
+        const formattedData = (res.data || []).map((acc: any) => ({
+          ...acc,
+          branch_name: this.branchesMap.get(String(acc.branch_code)) || this.branchesMap.get(String(acc.branch_id)) || acc.branch || acc.branch_code || '—'
+        }));
+        this.accounts.set(formattedData);
         this.totalRecords.set(res.total || 0);
         this.loading.set(false);
       },
@@ -530,7 +543,7 @@ export class AllAccountsComponent implements OnInit {
         const exportData = data.map((acc: any) => ({
           'Account No': acc.account_no || acc.account_id || '',
           'Borrower Name': acc.long_name || '',
-          'Branch Code': acc.branch_code || '',
+          'Branch': this.branchesMap.get(String(acc.branch_code)) || this.branchesMap.get(String(acc.branch_id)) || acc.branch || acc.branch_code || '',
           'Scheme': acc.scheme_desc || '',
           'Sanction Limit': acc.tot_sanc_limit || 0,
           'Balance': acc.balance || 0,

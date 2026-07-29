@@ -116,6 +116,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'ews/reports/:reportSlug',
+        loadComponent: () =>
+          import('./features/ews/reports/report-viewer/ews-report-viewer.component').then(
+            (m) => m.EwsReportViewerComponent,
+          ),
+      },
+      {
         path: 'ews/audit-trail',
         loadComponent: () =>
           import('./features/ews/audit-trail/audit-trail.component').then(

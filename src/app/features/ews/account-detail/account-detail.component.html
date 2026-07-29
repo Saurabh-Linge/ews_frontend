@@ -1,553 +1,575 @@
 <p-toast></p-toast>
-<div *ngIf="!loading()" style="margin-bottom: 24px">
-  <button class="btn" (click)="goBack()"><i class="pi pi-arrow-left"></i> Back to watch list</button>
+
+<div *ngIf="loading()" class="card p-6 text-center">
+  <i class="pi pi-spin pi-spinner text-3xl text-indigo-500 mb-3 block"></i>
+  <div class="text-600 font-medium">Loading account details...</div>
 </div>
 
 <div *ngIf="!loading()">
-  <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 24px;">
-  <!-- LEFT: 3-layer view -->
-  <div class="tl">
-    <!-- 💎 Premium Account Summary Card -->
-    <div style="background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%); border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; margin-bottom: 24px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.01); position: relative; overflow: hidden;">
-      <!-- Subtle background decoration -->
-      <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(79,70,229,0.08) 0%, rgba(79,70,229,0) 70%); border-radius: 50%;"></div>
-      
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; position: relative; z-index: 1;">
-        <div style="display: flex; gap: 16px; align-items: flex-start;">
-          <div style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(79,70,229,0.3); flex-shrink: 0;">
-            <i class="pi pi-building" style="color: white; font-size: 20px;"></i>
-          </div>
-          <div>
-            <div style="font-size: 22px; font-weight: 800; color: #1e293b; margin-bottom: 6px; letter-spacing: -0.5px;">{{ account()?.borrower_name }}</div>
-            <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px;">
-              <span style="font-size: 12px; font-weight: 600; color: #475569; background: #f1f5f9; padding: 4px 10px; border-radius: 20px; border: 1px solid #e2e8f0;">Acc: {{ account()?.account_id }}</span>
-              <span style="font-size: 12px; font-weight: 600; color: #475569; background: #f1f5f9; padding: 4px 10px; border-radius: 20px; border: 1px solid #e2e8f0;"><i class="pi pi-map-marker" style="font-size: 10px; margin-right: 4px;"></i>{{ account()?.branch_name || account()?.branch }}</span>
-              <span style="font-size: 12px; font-weight: 600; color: #0284c7; background: #e0f2fe; padding: 4px 10px; border-radius: 20px; border: 1px solid #bae6fd;">{{ account()?.loan_type }}</span>
-            </div>
-            
-            <div style="display: flex; gap: 24px; margin-top: 16px;">
-              <div>
-                <div style="font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Sanction</div>
-                <div style="font-size: 15px; font-weight: 700; color: #0f172a;">{{ account()?.sanction_amount || '—' }}</div>
-              </div>
-              <div style="width: 1px; background: #e2e8f0;"></div>
-              <div>
-                <div style="font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Outstanding</div>
-                <div style="font-size: 15px; font-weight: 700; color: #0f172a;">{{ account()?.outstanding || '—' }}</div>
-              </div>
-              <div style="width: 1px; background: #e2e8f0;"></div>
-              <div>
-                <div style="font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">DP</div>
-                <div style="font-size: 15px; font-weight: 700; color: #0f172a;">{{ account()?.dp || '—' }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div style="text-align: right;">
-          <div style="font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Risk Level</div>
-          <span style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 30px; font-size: 13px; font-weight: 700; box-shadow: 0 2px 8px rgba(0,0,0,0.05);" [ngClass]="{
-            'bg-red-50 text-red-700 border border-red-200': account()?.risk_level === 'High',
-            'bg-amber-50 text-amber-700 border border-amber-200': account()?.risk_level === 'Medium',
-            'bg-emerald-50 text-emerald-700 border border-emerald-200': account()?.risk_level === 'Low'
-          }" [style.background]="account()?.risk_level === 'High' ? '#fef2f2' : account()?.risk_level === 'Medium' ? '#fffbeb' : '#ecfdf5'"
-             [style.color]="account()?.risk_level === 'High' ? '#b91c1c' : account()?.risk_level === 'Medium' ? '#b45309' : '#047857'"
-             [style.border]="account()?.risk_level === 'High' ? '1px solid #fecaca' : account()?.risk_level === 'Medium' ? '1px solid #fde68a' : '1px solid #a7f3d0'">
-            <i class="pi pi-shield" style="font-size: 12px;"></i>
-            {{ account()?.risk_level || 'Medium' }}
-          </span>
-        </div>
-      </div>
-    </div>
+  <!-- Main Responsive 2-Column Layout with Tighter Gap (1rem / gap-3) -->
+  <div class="flex flex-column xl:flex-row gap-3 align-items-start">
+    
+    <!-- ════════════════════ LEFT COLUMN: Account Info & Signal Details ════════════════════ -->
+    <div class="flex-1 w-full flex flex-column gap-3" style="min-width: 0;">
 
-    <!-- Expanded Account Data -->
-    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 24px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.02);" *ngIf="account()?.dump_data">
-      <div style="cursor: pointer; padding: 14px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; transition: background 0.2s;" (click)="showDump = !showDump" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#f8fafc'">
-        <h4 style="margin: 0; font-size: 14px; font-weight: 600; color: #334155; display: flex; align-items: center; gap: 8px;">
-          <i class="pi pi-database" style="color: #64748b;"></i> 
-          Full CBS Account Dump
-        </h4>
-        <div style="width: 28px; height: 28px; border-radius: 50%; background: white; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center;">
-          <i [class]="showDump ? 'pi pi-chevron-up' : 'pi pi-chevron-down'" style="font-size: 12px; color: #64748b;"></i>
-        </div>
-      </div>
-      <div *ngIf="showDump" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; background: white; padding: 20px; font-size: 13px;">
-        <div *ngFor="let kv of account().dump_data | keyvalue" style="background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid #f1f5f9;">
-          <div style="color: #64748b; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">{{ formatKey(kv.key) }}</div>
-          <div style="font-weight: 600; color: #1e293b; word-break: break-all;">{{ kv.value !== null && kv.value !== '' ? kv.value : '—' }}</div>
-        </div>
-      </div>
-    </div>
+      <!-- 💎 1. Account Header Card -->
+      <div class="card p-4">
+        <div class="flex flex-column sm:flex-row align-items-start sm:align-items-center justify-content-between gap-3 mb-4 pb-3 border-bottom-1 surface-border">
+          <div class="flex align-items-center gap-3">
+            <button 
+              pButton 
+              pRipple 
+              icon="pi pi-arrow-left" 
+              class="p-button-text p-button-rounded p-button-secondary flex-shrink-0" 
+              (click)="goBack()"
+              pTooltip="Back to Watch List"
+              tooltipPosition="bottom">
+            </button>
+            <div class="w-3rem h-3rem border-round-xl flex align-items-center justify-content-center shadow-1 flex-shrink-0" style="background-color: #6366f1; color: #ffffff !important;">
+              <i class="pi pi-building" style="font-size: 1.5rem; color: #ffffff !important;"></i>
+            </div>
+            <div>
+              <h4 class="m-0 text-2xl font-bold text-900">{{ account()?.borrower_name }}</h4>
+              <div class="flex flex-wrap gap-2 align-items-center mt-2">
+                <span class="px-2.5 py-1 text-xs font-semibold text-700 bg-surface-100 border-1 surface-border border-round-lg">
+                  Acc: {{ account()?.account_id }}
+                </span>
+                <span class="px-2.5 py-1 text-xs font-semibold text-700 bg-surface-100 border-1 surface-border border-round-lg">
+                  <i class="pi pi-map-marker text-xs mr-1"></i>{{ account()?.branch_name || account()?.branch }}
+                </span>
+                <span class="px-2.5 py-1 text-xs font-semibold text-blue-700 bg-blue-50 border-1 border-blue-200 border-round-lg">
+                  {{ account()?.loan_type }}
+                </span>
+              </div>
+            </div>
+          </div>
 
-    <!-- Branch Response -->
-    @if (ewsState.isRole('branch') && account()?.status === 'Under investigation' && activeInvestigation()) {
-      <div class="layer-block layer-branch">
-        <div class="layer-head">
-          <span><span class="src-manual" style="background:var(--blue)">Branch</span> Branch Investigation Response (editable)</span>
+          <div class="flex align-items-center gap-3 self-start sm:self-center">
+            <div class="text-left sm:text-right">
+              <div class="text-xs font-bold text-500 uppercase tracking-wider mb-1">Risk Level</div>
+              <span class="px-3 py-1.5 font-bold text-sm border-round-lg inline-flex align-items-center gap-1.5"
+                    [ngClass]="{
+                      'bg-red-50 text-red-700 border-1 border-red-200': account()?.risk_level === 'High',
+                      'bg-amber-50 text-amber-700 border-1 border-amber-200': account()?.risk_level === 'Medium',
+                      'bg-emerald-50 text-emerald-700 border-1 border-emerald-200': account()?.risk_level === 'Low'
+                    }">
+                <i class="pi pi-shield"></i>
+                {{ account()?.risk_level || 'Medium' }}
+              </span>
+            </div>
+            <button 
+              pButton 
+              pRipple 
+              label="Back" 
+              icon="pi pi-arrow-left" 
+              class="p-button-secondary p-button-outlined p-button-sm ml-2 hidden sm:inline-flex" 
+              (click)="goBack()">
+            </button>
+          </div>
         </div>
-        <div class="layer-body">
-          <div style="background:var(--bg);border:1px solid var(--border);padding:14px;border-radius:var(--radius-sm);margin-bottom:18px">
-            <div style="font-weight:600;margin-bottom:8px">RO Remarks</div>
-            <div style="font-size:13px;color:var(--text); white-space: pre-wrap;">{{ activeInvestigation().notes || 'No remarks provided.' }}</div>
+
+        <!-- Sanction, Outstanding, DP stats row -->
+        <div class="grid text-center py-2 bg-surface-50 border-round-xl border-1 surface-border m-0">
+          <div class="col-4 border-right-1 surface-border">
+            <div class="text-xs font-bold text-500 uppercase tracking-wider mb-1">Sanction Amount</div>
+            <div class="text-lg font-bold text-900">{{ account()?.sanction_amount || '—' }}</div>
+          </div>
+          <div class="col-4 border-right-1 surface-border">
+            <div class="text-xs font-bold text-500 uppercase tracking-wider mb-1">Outstanding</div>
+            <div class="text-lg font-bold text-900">{{ account()?.outstanding || '—' }}</div>
+          </div>
+          <div class="col-4">
+            <div class="text-xs font-bold text-500 uppercase tracking-wider mb-1">Drawing Power (DP)</div>
+            <div class="text-lg font-bold text-900">{{ account()?.dp || '—' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 💎 2. Full CBS Account Dump (Uniform Aligned Pure White Field Boxes with 14px Padding) -->
+      <div class="card p-4" *ngIf="account()?.dump_data">
+        <div class="flex flex-column sm:flex-row align-items-start sm:align-items-center justify-content-between gap-3 cursor-pointer" (click)="showDump = !showDump">
+          <div class="flex align-items-center gap-2">
+            <div class="w-2.5rem h-2.5rem border-round-lg flex align-items-center justify-content-center bg-blue-50 text-blue-600 border-1 border-blue-200">
+              <i class="pi pi-database text-lg text-blue-600"></i>
+            </div>
+            <div>
+              <h5 class="m-0 text-lg font-bold text-900">Full CBS Account Dump</h5>
+              <div class="text-xs text-500 mt-0.5">{{ getCbsEntries().length }} Fields Available</div>
+            </div>
+          </div>
+
+          <div class="flex align-items-center gap-2 w-full sm:w-auto justify-content-between sm:justify-end" (click)="$event.stopPropagation()">
+            <div *ngIf="showDump" class="search-input-wrapper" style="width: 200px; position: relative;">
+              <i class="pi pi-search search-input-icon" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: #94a3b8;"></i>
+              <input 
+                pInputText 
+                type="text" 
+                placeholder="Filter fields..." 
+                class="p-inputtext-sm w-full" 
+                style="padding-left: 2.2rem !important; height: 2rem; font-size: 12px;" 
+                [(ngModel)]="cbsSearchText" />
+            </div>
+            <button pButton pRipple type="button" [icon]="showDump ? 'pi pi-chevron-up' : 'pi pi-chevron-down'" class="p-button-text p-button-rounded p-button-secondary" (click)="showDump = !showDump"></button>
+          </div>
+        </div>
+
+        <div *ngIf="showDump" class="grid formgrid m-0 mt-3 pt-3 border-top-1 surface-border" style="max-height: 400px; overflow-y: auto; padding-right: 4px;">
+          <div 
+            *ngFor="let item of getCbsEntries()" 
+            [ngClass]="isLongValue(item.key, item.value) ? 'col-12 mb-2' : 'col-12 sm:col-6 md:col-3 mb-2'" 
+            class="flex flex-column">
+            <div class="bg-white border-round-lg border-1 surface-border w-full flex flex-column justify-content-center" style="padding: 10px 14px !important; min-height: 54px; background-color: #ffffff !important;">
+              <div class="text-xs font-bold uppercase tracking-wide" style="font-size: 10px; margin-bottom: 3px; color: #64748b;">{{ formatKey(item.key) }}</div>
+              <div class="text-xs font-semibold word-break-break-all" style="font-size: 12px; line-height: 1.35; color: #0f172a;">
+                <ng-container *ngIf="item.value !== null && item.value !== ''; else emptyVal">
+                  {{ item.value }}
+                </ng-container>
+                <ng-template #emptyVal>
+                  <span class="text-400 font-normal" style="color: #94a3b8;">—</span>
+                </ng-template>
+              </div>
+            </div>
           </div>
           
-          <div *ngIf="activeInvestigation().responses?.length" style="margin-bottom: 18px">
-            <div style="font-weight:600; margin-bottom: 8px;">Previous Responses</div>
-            <div *ngFor="let res of activeInvestigation().responses" style="background:#F3F4F6;border:1px solid var(--border);padding:12px;border-radius:var(--radius-sm);margin-bottom:8px">
-              <div style="display:flex; justify-content: space-between; margin-bottom: 4px;">
-                <span style="font-weight:600; font-size:12px">{{ res.by }}</span>
-                <span style="font-size:11px; color:var(--muted)">{{ res.at | date:'short' }}</span>
+          <div *ngIf="getCbsEntries().length === 0" class="col-12 p-3 text-center text-500 text-xs">
+            No CBS fields match "{{ cbsSearchText }}"
+          </div>
+        </div>
+      </div>
+
+      <!-- 💎 3. L1: CBS Auto-Detection Signals -->
+      <div class="card p-4">
+        <div class="flex align-items-center justify-content-between mb-4 pb-3 border-bottom-1 surface-border">
+          <div class="flex align-items-center gap-2">
+            <span class="px-2.5 py-1 border-round-lg bg-blue-500 text-white font-bold text-xs">L1</span>
+            <h5 class="m-0 text-xl font-bold text-900">CBS Auto-Detection ({{ cbsSignals().length }})</h5>
+          </div>
+          <span class="px-2.5 py-1 text-xs font-bold text-blue-700 bg-blue-50 border-1 border-blue-200 border-round-lg">Read Only</span>
+        </div>
+
+        <div *ngIf="cbsSignals().length === 0" class="p-4 text-center text-500 border-1 border-dashed surface-border border-round-xl">
+          No CBS Auto-Signals Detected
+        </div>
+
+        <div *ngFor="let sig of cbsSignals()" class="surface-card border-1 surface-border border-round-xl p-3 mb-3 border-left-3 border-blue-500">
+          <div class="text-sm font-bold text-900 mb-2">
+            <ng-container *ngIf="sig.rules && sig.rules.length > 0; else singleRule">
+              <div *ngFor="let r of sig.rules" class="mb-1">
+                <i class="pi pi-circle-fill text-blue-500 text-xs mr-2"></i>{{ r.name || r }}
               </div>
-              <div style="font-size:13px; margin-bottom: 6px;">{{ res.response }}</div>
-              @if (res.attachments?.length) {
-                <div style="margin-bottom: 8px; display: flex; flex-direction: column; gap: 4px;">
-                  @for (att of res.attachments; track $index) {
-                    <a [href]="apiUrl + '/api/ews/upload/' + att.saved_name" 
-                       [target]="isViewable(att.saved_name) ? '_blank' : '_self'"
-                       [attr.download]="!isViewable(att.saved_name) ? att.original_name : null"
-                       style="font-size: 11px; text-decoration: none; color: var(--blue); background: var(--bg); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border); width: fit-content; display: inline-flex; align-items: center; gap: 4px;">
-                      <i class="pi pi-download"></i> {{ att.original_name }}
-                    </a>
-                  }
-                </div>
-              }
-              <div><span class="tag tag-gray">{{ res.status }}</span></div>
+            </ng-container>
+            <ng-template #singleRule>
+              <div><i class="pi pi-circle-fill text-blue-500 text-xs mr-2"></i>{{ sig.rule }}</div>
+            </ng-template>
+          </div>
+          <div class="flex align-items-center gap-2 mb-2">
+            <span class="px-2 py-0.5 text-xs font-bold text-sky-800 bg-sky-100 border-1 border-sky-200 border-round">{{ sig.result }}</span>
+          </div>
+          <div class="text-xs font-semibold text-600 flex align-items-center gap-1">
+            <i class="pi pi-arrow-right text-xs"></i> {{ sig.signal }}
+          </div>
+        </div>
+      </div>
+
+      <!-- 💎 4. L2: AuditPro Triggers -->
+      <div class="card p-4">
+        <div class="flex align-items-center justify-content-between mb-4 pb-3 border-bottom-1 surface-border">
+          <div class="flex align-items-center gap-2">
+            <span class="px-2.5 py-1 border-round-lg bg-red-500 text-white font-bold text-xs">L2</span>
+            <h5 class="m-0 text-xl font-bold text-900">AuditPro Triggers ({{ auditSignals().length }})</h5>
+          </div>
+          <span class="px-2.5 py-1 text-xs font-bold text-red-700 bg-red-50 border-1 border-red-200 border-round-lg">Read Only</span>
+        </div>
+
+        <div *ngIf="auditSignals().length === 0" class="p-4 text-center text-500 border-1 border-dashed surface-border border-round-xl">
+          No AuditPro Triggers Detected
+        </div>
+
+        <div *ngFor="let sig of auditSignals()" class="surface-card border-1 surface-border border-round-xl p-3 mb-3 border-left-3 border-red-500">
+          <div class="text-sm font-bold text-900 mb-2">{{ sig.question }}</div>
+          <div class="flex align-items-center gap-2 mb-2">
+            <span class="px-2 py-0.5 text-xs font-bold text-red-800 bg-red-100 border-1 border-red-200 border-round">{{ sig.answer }}</span>
+          </div>
+          <div class="text-xs font-semibold text-600 flex align-items-center gap-1">
+            <i class="pi pi-arrow-right text-xs"></i> {{ sig.signal }}
+          </div>
+        </div>
+      </div>
+
+      <!-- 💎 5. RO Actions & Escalation Panel -->
+      <div class="card p-4" *ngIf="ewsState.isRole('ro') && account()?.status && account()?.status !== 'Normal'">
+        <div class="flex align-items-center justify-content-between mb-4 pb-3 border-bottom-1 surface-border">
+          <div class="flex align-items-center gap-2">
+            <span class="px-2.5 py-1 border-round-lg bg-emerald-500 text-white font-bold text-xs">RO</span>
+            <h5 class="m-0 text-xl font-bold text-900">RO Actions & Escalation</h5>
+          </div>
+        </div>
+
+        <div class="flex flex-column gap-3">
+          <div>
+            <label class="font-bold text-sm text-700 mb-1 block">RO Remarks</label>
+            <textarea pInputTextarea rows="3" placeholder="Overall observations about this account..." class="w-full" [(ngModel)]="roRemarks"></textarea>
+          </div>
+
+          <div>
+            <label class="font-bold text-sm text-700 mb-1 block">Evidence Upload</label>
+            <div class="bg-white border-2 border-dashed surface-border border-round-xl p-4 text-center cursor-pointer relative" style="background-color: #ffffff !important;" (click)="fileInputRo.click()">
+              <i class="pi pi-cloud-upload text-3xl text-indigo-500 mb-2"></i>
+              <div class="text-sm font-bold text-900 mb-1">Drop evidence files here or click to browse</div>
+              <div class="text-xs text-500 mb-2">Supports PDF, Images, Excel &middot; max 10MB</div>
+              <button pButton pRipple label="Choose Files" icon="pi pi-upload" class="p-button-outlined p-button-sm p-button-secondary" pointer-events="none"></button>
+              <input #fileInputRo type="file" multiple style="display:none" (change)="onFilesSelected($event)">
+            </div>
+            <div *ngIf="selectedFiles.length" class="mt-2 text-xs text-700 flex flex-column gap-1">
+              <div *ngFor="let f of selectedFiles; let i = index" class="flex align-items-center justify-content-between bg-white p-2 border-round border-1 surface-border">
+                <span class="flex align-items-center gap-2"><i class="pi pi-file text-indigo-500"></i> {{ f.name }}</span>
+                <i class="pi pi-times text-red-500 cursor-pointer" (click)="removeFile(i)"></i>
+              </div>
             </div>
           </div>
 
-          <div class="fg" style="margin-top: 14px">
-            <label class="fl">Resolution Status</label>
-            <select class="form-control" [(ngModel)]="resolutionStatus">
+          <div class="flex flex-wrap align-items-center gap-2 pt-3 border-top-1 surface-border">
+            <p-select [(ngModel)]="selectedRisk" [options]="riskOptions" optionLabel="label" optionValue="value" styleClass="w-10rem p-inputtext-sm"></p-select>
+
+            <button pButton pRipple [label]="isSending ? 'Sending...' : 'Send for Investigation'" [icon]="isSending ? 'pi pi-spin pi-spinner' : 'pi pi-search'" class="p-button-primary" (click)="sendForInvestigation()" [disabled]="isSending"></button>
+            <button pButton pRipple [label]="isMarking ? 'Marking...' : 'No Risk'" [icon]="isMarking ? 'pi pi-spin pi-spinner' : 'pi pi-check-circle'" class="p-button-success" (click)="markNoRisk()" [disabled]="isMarking"></button>
+            <button pButton pRipple [label]="isEscalating ? 'Escalating...' : 'Escalate to CRO'" [icon]="isEscalating ? 'pi pi-spin pi-spinner' : 'pi pi-arrow-up'" class="p-button-danger" (click)="escalateToCro()" [disabled]="isEscalating"></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 💎 6. Branch Response Panel (Editable) -->
+      <div class="card p-4" *ngIf="ewsState.isRole('branch') && account()?.status === 'Under investigation' && activeInvestigation()">
+        <div class="flex align-items-center justify-content-between mb-4 pb-3 border-bottom-1 surface-border">
+          <div class="flex align-items-center gap-2">
+            <span class="px-2.5 py-1 border-round-lg bg-blue-500 text-white font-bold text-xs">Branch</span>
+            <h5 class="m-0 text-xl font-bold text-900">Branch Investigation Response</h5>
+          </div>
+        </div>
+
+        <div class="flex flex-column gap-3">
+          <div class="surface-50 border-1 surface-border p-3 border-round-xl mb-2">
+            <div class="font-bold text-xs text-500 uppercase mb-1">RO Remarks</div>
+            <div class="text-sm text-900 white-space-pre-wrap">{{ activeInvestigation().notes || 'No remarks provided.' }}</div>
+          </div>
+
+          <div *ngIf="activeInvestigation().responses?.length" class="mb-2">
+            <div class="font-bold text-sm text-900 mb-2">Previous Responses</div>
+            <div *ngFor="let res of activeInvestigation().responses" class="surface-ground border-1 surface-border p-3 border-round-xl mb-2">
+              <div class="flex align-items-center justify-content-between mb-1">
+                <span class="font-bold text-xs text-700">{{ res.by }}</span>
+                <span class="text-xs text-500">{{ res.at | date:'short' }}</span>
+              </div>
+              <div class="text-sm text-900 mb-2">{{ res.response }}</div>
+              <div *ngIf="res.attachments?.length" class="flex flex-column gap-1 mb-2">
+                <a *ngFor="let att of res.attachments" 
+                   [href]="apiUrl + '/api/ews/upload/' + att.saved_name" 
+                   [target]="isViewable(att.saved_name) ? '_blank' : '_self'"
+                   [attr.download]="!isViewable(att.saved_name) ? att.original_name : null"
+                   class="text-xs text-blue-600 surface-card px-2 py-1 border-round border-1 surface-border inline-flex align-items-center gap-1 w-max text-none">
+                  <i class="pi pi-download"></i> {{ att.original_name }}
+                </a>
+              </div>
+              <span class="px-2 py-0.5 text-xs font-bold border-round bg-gray-100 text-gray-700">{{ res.status }}</span>
+            </div>
+          </div>
+
+          <div>
+            <label class="font-bold text-sm text-700 mb-1 block">Resolution Status</label>
+            <select class="w-full p-2 border-1 surface-border border-round-lg text-sm bg-surface-card" [(ngModel)]="resolutionStatus">
               <option value="Issue resolved — provide explanation">Issue resolved — provide explanation</option>
               <option value="Issue under process — partial resolution">Issue under process — partial resolution</option>
               <option value="Issue exists — provide clarification">Issue exists — provide clarification</option>
             </select>
           </div>
-          <div class="fg" style="margin-top: 14px">
-            <label class="fl">Branch Response</label>
-            <textarea rows="4" placeholder="Type your detailed response here..." style="width: 100%" [(ngModel)]="branchResponseText"></textarea>
+
+          <div>
+            <label class="font-bold text-sm text-700 mb-1 block">Branch Response</label>
+            <textarea pInputTextarea rows="4" placeholder="Type your detailed response here..." class="w-full" [(ngModel)]="branchResponseText"></textarea>
           </div>
-          <div class="fg" style="margin-top: 14px">
-            <label class="fl">Evidence Upload</label>
-            <div class="upload-zone" style="position: relative; text-align: center; border: 2px dashed var(--border); padding: 30px; border-radius: var(--radius); background: var(--bg); cursor: pointer;">
-              <div class="upload-icon" style="color: var(--blue); margin-bottom: 12px;"><i class="pi pi-cloud-upload" style="font-size: 32px"></i></div>
-              <div style="font-size:15px;font-weight:600;margin-bottom:4px">Drop your files here</div>
-              <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Supports PDF, Images, Excel — max 10MB</div>
-              <button class="btn btn-primary btn-sm" style="pointer-events: none;">Choose file</button>
-              <input type="file" id="evidenceUpload" multiple style="opacity: 0; position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: pointer;" (change)="onFilesSelected($event)">
+
+          <div>
+            <label class="font-bold text-sm text-700 mb-1 block">Evidence Upload</label>
+            <div class="bg-white border-2 border-dashed surface-border border-round-xl p-4 text-center cursor-pointer relative" style="background-color: #ffffff !important;" (click)="fileInputBranch.click()">
+              <i class="pi pi-cloud-upload text-3xl text-blue-500 mb-2"></i>
+              <div class="text-sm font-bold text-900 mb-1">Drop evidence files here or click to browse</div>
+              <div class="text-xs text-500 mb-2">Supports PDF, Images, Excel &middot; max 10MB</div>
+              <button pButton pRipple label="Choose Files" icon="pi pi-upload" class="p-button-outlined p-button-sm p-button-secondary" pointer-events="none"></button>
+              <input #fileInputBranch type="file" multiple style="display:none" (change)="onFilesSelected($event)">
             </div>
-            <div *ngIf="selectedFiles.length" style="margin-top: 8px; font-size: 13px; color: var(--text);">
-              <div *ngFor="let f of selectedFiles; let i = index" style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                <i class="pi pi-file"></i> {{ f.name }}
-                <i class="pi pi-times" style="color: var(--red); cursor: pointer;" (click)="removeFile(i)" title="Remove file"></i>
+            <div *ngIf="selectedFiles.length" class="mt-2 text-xs text-700 flex flex-column gap-1">
+              <div *ngFor="let f of selectedFiles; let i = index" class="flex align-items-center justify-content-between bg-white p-2 border-round border-1 surface-border">
+                <span class="flex align-items-center gap-2"><i class="pi pi-file text-blue-500"></i> {{ f.name }}</span>
+                <i class="pi pi-times text-red-500 cursor-pointer" (click)="removeFile(i)"></i>
               </div>
             </div>
           </div>
-          <div style="margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px;">
-            <button class="btn btn-primary" (click)="submitBranchResponse()" [disabled]="isSendingResponse"><i *ngIf="isSendingResponse" class="pi pi-spin pi-spinner" style="margin-right: 4px"></i> Submit Response</button>
+
+          <div class="pt-3 border-top-1 surface-border">
+            <button pButton pRipple [label]="isSendingResponse ? 'Submitting...' : 'Submit Response'" [icon]="isSendingResponse ? 'pi pi-spin pi-spinner' : 'pi pi-check'" class="p-button-primary" (click)="submitBranchResponse()" [disabled]="isSendingResponse"></button>
           </div>
         </div>
       </div>
-    }
 
-    <!-- Branch Account Dispute -->
-    @if (ewsState.isRole('branch') && account()?.status !== 'Resolved' && account()?.status !== 'Closed') {
-      <div class="layer-block" style="border: 1px solid #C7D2FE; margin-top: 24px; margin-bottom: 24px;">
-        <div class="layer-head" style="background: #EEF2FF; border-bottom: 1px solid #E0E7FF; display: flex; justify-content: space-between; align-items: center;">
-          <span style="color: #312E81;"><span class="src-manual" style="background:var(--amber)">Dispute</span> Raise Account Dispute</span>
-          <button class="btn btn-xs btn-outline" (click)="toggleDisputeForm()" style="border-color: #A5B4FC; color: #4F46E5;">
-            <i class="pi pi-exclamation-triangle" style="margin-right: 4px;"></i> {{ isRaisingDispute ? 'Cancel' : 'Raise Dispute' }}
-          </button>
+      <!-- 💎 7. CRO Decision Module -->
+      <div class="card p-4 border-left-4 border-red-500" *ngIf="ewsState.isRole('cro') && account()?.status === 'Escalated'">
+        <div class="flex align-items-center justify-content-between mb-4 pb-3 border-bottom-1 surface-border">
+          <div class="flex align-items-center gap-2">
+            <span class="px-2.5 py-1 border-round-lg bg-red-600 text-white font-bold text-xs">CRO</span>
+            <h5 class="m-0 text-xl font-bold text-900">Chief Risk Officer Decision</h5>
+          </div>
         </div>
-        
-        @if (isRaisingDispute) {
-          <div class="layer-body" style="background: #fff; padding: 16px;">
-            <div style="font-size: 13px; color: var(--muted); margin-bottom: 16px;">
-              Raise a dispute for the entire account if you believe the triggers are invalid or the risk is misclassified.
-            </div>
-            
-            <div class="fg" style="margin-bottom: 14px;">
-              <label class="fl">Reason for Dispute</label>
-              <textarea rows="3" placeholder="Explain your reasoning..." style="width: 100%" [(ngModel)]="disputeReason"></textarea>
-            </div>
-            
-            <div class="fg" style="margin-bottom: 16px;">
-              <label class="fl">Evidence Upload (Optional)</label>
-              <div class="upload-zone" style="position: relative; text-align: center; border: 2px dashed var(--border); padding: 20px; border-radius: var(--radius); background: var(--bg); cursor: pointer;">
-                <div class="upload-icon" style="color: var(--blue); margin-bottom: 8px;"><i class="pi pi-cloud-upload" style="font-size: 24px"></i></div>
-                <div style="font-size:13px;font-weight:600;margin-bottom:4px">Drop your files here</div>
-                <div style="font-size:11px;color:var(--muted);margin-bottom:10px">Supports PDF, Images, Excel — max 10MB</div>
-                <button class="btn btn-primary btn-sm" style="pointer-events: none; font-size: 11px; padding: 4px 12px;">Choose file</button>
-                <input type="file" id="disputeEvidenceUpload" multiple style="opacity: 0; position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: pointer;" (change)="onDisputeFilesSelected($event)">
-              </div>
-              <div *ngIf="disputeFiles.length" style="margin-top: 8px; font-size: 12px; color: var(--text);">
-                <div *ngFor="let f of disputeFiles; let i = index" style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                  <i class="pi pi-file"></i> {{ f.name }}
-                  <i class="pi pi-times" style="color: var(--red); cursor: pointer;" (click)="removeDisputeFile(i)" title="Remove file"></i>
-                </div>
-              </div>
-            </div>
 
-            <div style="display: flex; gap: 8px; justify-content: flex-end; border-top: 1px solid var(--border); padding-top: 16px;">
-              <button class="btn btn-secondary btn-sm" (click)="toggleDisputeForm()" [disabled]="isSubmittingDispute">Cancel</button>
-              <button class="btn btn-primary btn-sm" (click)="submitDispute()" [disabled]="!disputeReason || isSubmittingDispute">
-                <i class="pi" [ngClass]="isSubmittingDispute ? 'pi-spin pi-spinner' : 'pi-check'" style="margin-right: 6px"></i> Submit Dispute
-              </button>
+        <div class="flex flex-column gap-3">
+          <p class="text-sm text-600 m-0">This account has been escalated to you. Please review the details above and provide a decision.</p>
+
+          <div>
+            <label class="font-bold text-sm text-700 mb-1 block">Decision Notes</label>
+            <textarea pInputTextarea rows="3" placeholder="Enter notes justifying the decision..." class="w-full" [(ngModel)]="croNotes"></textarea>
+          </div>
+
+          <div class="flex flex-wrap gap-2 pt-3 border-top-1 surface-border">
+            <button pButton pRipple label="Approve" icon="pi pi-check" class="p-button-success" (click)="decideEscalation('Approved')" [disabled]="isDeciding"></button>
+            <button pButton pRipple label="Send back to RO" icon="pi pi-refresh" class="p-button-outlined p-button-info" (click)="decideEscalation('Sent back')" [disabled]="isDeciding"></button>
+            <button pButton pRipple label="Downgrade" icon="pi pi-eye" class="p-button-warning" (click)="decideEscalation('Downgraded')" [disabled]="isDeciding"></button>
+            <button pButton pRipple label="Force Escalate" icon="pi pi-exclamation-triangle" class="p-button-danger" (click)="decideEscalation('Force escalated')" [disabled]="isDeciding"></button>
+          </div>
+        </div>
+      </div>
+
+    </div> <!-- END LEFT COLUMN -->
+
+    <!-- ════════════════════ RIGHT COLUMN: Actions, Verifications, & Audit Trail ════════════════════ -->
+    <div class="w-full xl:w-26rem flex flex-column gap-3 flex-shrink-0">
+
+      <!-- 💎 1. API Verification Card -->
+      <div class="card p-4">
+        <div class="flex align-items-start gap-3 mb-3">
+          <div class="w-3rem h-3rem border-round-xl flex align-items-center justify-content-center shadow-1 flex-shrink-0" style="background-color: #10b981; color: #ffffff !important;">
+            <i class="pi pi-check-circle" style="font-size: 1.5rem; color: #ffffff !important;"></i>
+          </div>
+          <div>
+            <h5 class="m-0 text-lg font-bold text-900">API Verification</h5>
+            <div class="text-xs text-600 mt-1">Verify PAN, GSTIN, UDYAM, CIN, DIN, and Real Estate/Land Records.</div>
+          </div>
+        </div>
+        <button pButton pRipple label="Run Verification" icon="pi pi-verified" class="p-button-success w-full" (click)="openApiVerification()"></button>
+      </div>
+
+      <!-- 💎 2. RO Pre-Assessment Card -->
+      <div class="card p-4" *ngIf="accountQuestions().length > 0 && ewsState.isRole('ro', 'cro', 'admin')">
+        <div class="flex align-items-start gap-3 mb-3">
+          <div class="w-3rem h-3rem border-round-xl flex align-items-center justify-content-center shadow-1 flex-shrink-0" style="background-color: #6366f1; color: #ffffff !important;">
+            <i class="pi pi-list-check" style="font-size: 1.5rem; color: #ffffff !important;"></i>
+          </div>
+          <div>
+            <h5 class="m-0 text-lg font-bold text-900">RO Pre-Assessment</h5>
+            <div class="text-xs text-600 mt-1">{{ answeredQuestionsCount }} / {{ accountQuestions().length }} answered</div>
+          </div>
+        </div>
+        <button pButton pRipple label="Open Assessment" icon="pi pi-pencil" class="p-button-outlined p-button-indigo w-full" (click)="showAssessmentDialog = true"></button>
+      </div>
+
+      <!-- 💎 3. Branch Dispute Module Card -->
+      <div class="card p-4" *ngIf="ewsState.isRole('branch') && account()?.status !== 'Resolved' && account()?.status !== 'Closed'">
+        <div class="flex align-items-center justify-content-between mb-3">
+          <div class="flex align-items-center gap-2">
+            <span class="px-2.5 py-1 border-round-lg bg-amber-500 text-white font-bold text-xs">Dispute</span>
+            <h5 class="m-0 text-lg font-bold text-900">Raise Account Dispute</h5>
+          </div>
+          <button pButton pRipple [label]="isRaisingDispute ? 'Cancel' : 'Raise'" icon="pi pi-exclamation-triangle" class="p-button-outlined p-button-warning p-button-sm" (click)="toggleDisputeForm()"></button>
+        </div>
+
+        <div *ngIf="isRaisingDispute" class="pt-3 border-top-1 surface-border flex flex-column gap-3">
+          <div class="text-xs text-600">Raise a dispute if you believe triggers are invalid.</div>
+          
+          <div>
+            <label class="font-bold text-sm text-700 mb-1 block">Reason for Dispute</label>
+            <textarea pInputTextarea rows="3" placeholder="Explain your reasoning..." class="w-full" [(ngModel)]="disputeReason"></textarea>
+          </div>
+
+          <div>
+            <label class="font-bold text-sm text-700 mb-1 block">Evidence Upload (Optional)</label>
+            <div class="bg-white border-2 border-dashed surface-border border-round-xl p-3 text-center cursor-pointer relative" style="background-color: #ffffff !important;" (click)="fileInputDispute.click()">
+              <i class="pi pi-cloud-upload text-2xl text-amber-500 mb-1"></i>
+              <div class="text-xs font-bold text-900 mb-1">Drop evidence files here</div>
+              <input #fileInputDispute type="file" multiple style="display:none" (change)="onDisputeFilesSelected($event)">
+            </div>
+            <div *ngIf="disputeFiles.length" class="mt-2 text-xs text-700 flex flex-column gap-1">
+              <div *ngFor="let f of disputeFiles; let i = index" class="flex align-items-center justify-content-between bg-white p-2 border-round border-1 surface-border">
+                <span class="flex align-items-center gap-2"><i class="pi pi-file text-amber-500"></i> {{ f.name }}</span>
+                <i class="pi pi-times text-red-500 cursor-pointer" (click)="removeDisputeFile(i)"></i>
+              </div>
             </div>
           </div>
+
+          <div class="flex justify-content-end gap-2 pt-3 border-top-1 surface-border">
+            <button pButton pRipple label="Cancel" class="p-button-secondary p-button-outlined p-button-sm" (click)="toggleDisputeForm()" [disabled]="isSubmittingDispute"></button>
+            <button pButton pRipple [label]="isSubmittingDispute ? 'Submitting...' : 'Submit'" icon="pi pi-check" class="p-button-primary p-button-sm" (click)="submitDispute()" [disabled]="!disputeReason || isSubmittingDispute"></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 💎 4. Disputes List Card -->
+      <div class="card p-4" *ngIf="disputes().length">
+        <div class="flex align-items-center justify-content-between mb-4 pb-3 border-bottom-1 surface-border">
+          <h5 class="m-0 text-xl font-bold text-900">Disputes</h5>
+          <span class="px-2.5 py-1 text-xs font-bold border-round bg-amber-100 text-amber-800">
+            {{ getPendingDisputesCount() }} Pending
+          </span>
+        </div>
+
+        <div *ngFor="let d of disputes()" class="surface-ground border-1 surface-border border-round-xl p-3 mb-3">
+          <div class="flex align-items-center justify-content-between mb-1">
+            <span class="font-bold text-sm text-900">
+              {{ d.signal_number ? 'Signal #' + d.signal_number + ' - ' + d.signal_name : 'Account Level Dispute' }}
+            </span>
+            <span class="px-2 py-0.5 text-xs font-bold border-round"
+                  [ngClass]="{
+                    'bg-amber-100 text-amber-800': d.status === 'Pending',
+                    'bg-green-100 text-green-800': d.status === 'Accepted',
+                    'bg-red-100 text-red-800': d.status === 'Rejected'
+                  }">
+              {{ d.status }}
+            </span>
+          </div>
+
+          <div class="text-sm text-700 mb-2">{{ d.reason }}</div>
+          <div class="text-xs text-500 mb-2">Raised by {{ d.raised_by }} on {{ d.raised_at | date:'short' }}</div>
+
+          <div *ngIf="d.attachments?.length" class="flex flex-column gap-1 mb-2">
+            <a *ngFor="let att of d.attachments"
+               [href]="apiUrl + '/api/ews/upload/' + att.saved_name"
+               [target]="isViewable(att.saved_name) ? '_blank' : '_self'"
+               [attr.download]="!isViewable(att.saved_name) ? att.original_name : null"
+               class="text-xs text-blue-600 surface-card px-2 py-1 border-round border-1 surface-border inline-flex align-items-center gap-1 w-max text-none">
+              <i class="pi pi-download"></i> {{ att.original_name }}
+            </a>
+          </div>
+
+          <div *ngIf="(ewsState.isRole('ro') || ewsState.isRole('cro')) && d.status === 'Pending'" class="flex gap-2 pt-2 border-top-1 surface-border">
+            <button pButton pRipple label="Accept" icon="pi pi-check" class="p-button-success p-button-sm" (click)="acceptDispute(d)" [disabled]="disputeLoading[d.id] === 'accept'"></button>
+            <button pButton pRipple label="Reject" icon="pi pi-times" class="p-button-danger p-button-sm" (click)="rejectDispute(d)" [disabled]="disputeLoading[d.id] === 'reject'"></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 💎 5. Audit Trail Timeline Card -->
+      <div class="card p-4">
+        <div class="flex align-items-center justify-content-between mb-4 pb-3 border-bottom-1 surface-border">
+          <h5 class="m-0 text-xl font-bold text-900">Audit Trail</h5>
+        </div>
+
+        <div class="ews-timeline">
+          <div *ngFor="let t of timeline()" class="ews-tl-item">
+            <div class="ews-tl-dot" [style.background]="t.color"></div>
+            <div>
+              <div class="ews-tl-act text-900">{{ t.action }}</div>
+              <div class="ews-tl-meta text-500 white-space-pre-wrap">{{ t.meta }}</div>
+              <div *ngIf="t.attachments?.length" class="flex flex-column gap-1 mt-2">
+                <a *ngFor="let att of t.attachments"
+                   [href]="apiUrl + '/api/ews/upload/' + att.saved_name"
+                   [target]="isViewable(att.saved_name) ? '_blank' : '_self'"
+                   [attr.download]="!isViewable(att.saved_name) ? att.original_name : null"
+                   class="text-xs text-blue-600 surface-ground px-2 py-1 border-round border-1 surface-border inline-flex align-items-center gap-1 w-max text-none">
+                  <i class="pi pi-download"></i> {{ att.original_name }}
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div> <!-- END RIGHT COLUMN -->
+  </div> <!-- END FLEX ROW -->
+
+  <!-- RO Assessment Drawer -->
+  <p-drawer
+    [(visible)]="showAssessmentDialog"
+    position="right"
+    styleClass="drawer-layout"
+    [style]="{ width: '90vw', maxWidth: '1200px' }"
+    appendTo="body"
+    (onHide)="showAssessmentDialog = false"
+    (visibleChange)="$event ? null : showAssessmentDialog = false">
+
+    <ng-template pTemplate="header">
+      <div class="flex align-items-center gap-2">
+        <i class="pi pi-list-check text-indigo-500 text-xl"></i>
+        <span class="font-bold text-lg text-900">RO Pre-Assessment Questionnaire</span>
+        <span class="text-xs font-semibold px-2.5 py-1 border-round bg-indigo-50 text-indigo-700 border-1 border-indigo-200 ml-2">
+          {{ answeredQuestionsCount }} / {{ accountQuestions().length }} Answered
+        </span>
+      </div>
+    </ng-template>
+
+    <div class="flex flex-column gap-3 p-1">
+      @if (roGroupedSignals().length > 0) {
+        <p-message severity="error" styleClass="w-full mb-2" [text]="'⚠ ' + roGroupedSignals().length + ' signal(s) triggered by your answers'"></p-message>
+        @for (sigGroup of roGroupedSignals(); track sigGroup.signal_id) {
+          <p-panel [toggleable]="true" [collapsed]="true" styleClass="mb-2"
+                   [header]="'Signal #' + sigGroup.signal_number + ' — ' + sigGroup.signal_name">
+            @for (rule of sigGroup.rules; track $index) {
+              <p style="margin: 4px 0; font-size: 13px;">• {{ getQuestionText(rule) }}
+                @if (rule.risk) { <span style="font-weight:700; font-size:11px; margin-left:6px;">{{ rule.risk }}</span> }
+              </p>
+            }
+          </p-panel>
         }
-      </div>
-    }
+        <p-divider></p-divider>
+      }
 
-    <!-- CRO Decision Module -->
-    @if (ewsState.isRole('cro') && account()?.status === 'Escalated') {
-      <div class="layer-block layer-cro" style="border: 1px solid var(--red);">
-        <div class="layer-head" style="background: var(--red); color: white;">
-          <span><span class="src-manual" style="background: white; color: var(--red);">CRO</span> Chief Risk Officer Decision</span>
-        </div>
-        <div class="layer-body">
-          <p style="color:var(--muted);font-size:13px;margin-bottom:16px">This account has been escalated to you. Please review the details above and provide a decision.</p>
-          <div class="fg" style="margin-top: 14px">
-            <label class="fl">Decision Notes</label>
-            <textarea rows="3" placeholder="Enter notes justifying the decision..." style="width: 100%" [(ngModel)]="croNotes"></textarea>
-          </div>
-          <div style="display: flex; gap: 8px; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px; flex-wrap: wrap;">
-            <button class="btn btn-green" (click)="decideEscalation('Approved')" [disabled]="isDeciding"><i class="pi pi-check"></i> Approve</button>
-            <button class="btn" style="border-color:var(--blue);color:var(--blue)" (click)="decideEscalation('Sent back')" [disabled]="isDeciding"><i class="pi pi-refresh"></i> Send back to RO</button>
-            <button class="btn btn-amber" (click)="decideEscalation('Downgraded')" [disabled]="isDeciding"><i class="pi pi-eye"></i> Downgrade</button>
-            <button class="btn btn-red" (click)="decideEscalation('Force escalated')" [disabled]="isDeciding"><i class="pi pi-alert-triangle"></i> Force escalate</button>
-          </div>
-        </div>
-      </div>
-    }
-  </div>
+      <p class="text-xs text-indigo-600 mb-2">
+        <i class="pi pi-info-circle mr-1"></i>
+        Fill in all fields below. Answers are used by the Rule Engine for risk evaluation.
+      </p>
 
-  <!-- RIGHT: Timeline + Disputes -->
-  <div>
-    <div class="card mb-3">
-      <div class="card-header">
-        <h3>Audit trail</h3>
-      </div>
-      <div class="card-body">
-        <div class="tl">
-          @for (t of timeline(); track $index) {
-            <div class="tl-item">
-              <div class="tl-dot" [style.background]="t.color"></div>
-              <div class="tl-line"></div>
-              <div>
-                <div class="tl-act">{{ t.action }}</div>
-                <div class="tl-meta">{{ t.meta }}</div>
-                @if (t.attachments?.length) {
-                  <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 4px;">
-                    @for (att of t.attachments; track $index) {
-                      <a [href]="apiUrl + '/api/ews/upload/' + att.saved_name" 
-                         [target]="isViewable(att.saved_name) ? '_blank' : '_self'"
-                         [attr.download]="!isViewable(att.saved_name) ? att.original_name : null"
-                         style="font-size: 11px; text-decoration: none; color: var(--blue); background: var(--bg); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border); width: fit-content; display: inline-flex; align-items: center; gap: 4px;">
-                        <i class="pi pi-download"></i> {{ att.original_name }}
-                      </a>
-                    }
-                  </div>
-                }
-              </div>
-            </div>
-          }
-        </div>
-      </div>
-    </div>
+      @for (q of accountQuestions(); track q.id; let i = $index) {
+        <div class="surface-card p-3 border-round-xl border-1 surface-border mb-2">
+          <label class="block font-bold text-sm text-900 mb-2">
+            {{ i + 1 }}. {{ q.question_desc }}
+            <small class="text-400 font-normal ml-2 font-monospace">{{ q.reference_name }}</small>
+          </label>
 
-    @if (disputes().length) {
-      <div class="dashboard-panel">
-        <div class="card-header">
-          <h3>Disputes</h3>
-          <span class="tag tag-amb">{{ getPendingDisputesCount() }} pending</span>
-        </div>
-        <div class="card-body">
-          @for (d of disputes(); track $index) {
-            <div style="background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 12px;">
-              <div style="font-weight: 600; font-size: 13px; margin-bottom: 4px;">
-                @if (d.signal_number) {
-                  Signal #{{ d.signal_number }}
-                  <span style="font-weight: 500; color: var(--blue);"> - {{ d.signal_name }}</span>
-                } @else {
-                  Account Level Dispute
-                }
-                <span style="float: right; font-size: 11px;" [ngClass]="{'tag-amb': d.status === 'Pending', 'tag-grn': d.status === 'Accepted', 'tag-red': d.status === 'Rejected'}" class="tag">{{ d.status }}</span>
-              </div>
-              <div style="color: var(--text); font-size: 12px; margin-bottom: 8px;">{{ d.reason }}</div>
-              
-              <div style="font-size: 11px; color: var(--muted); margin-bottom: 8px;">
-                Raised by {{ d.raised_by }} on {{ d.raised_at | date:'short' }}
-              </div>
-
-              @if (d.attachments?.length) {
-                <div style="display: flex; flex-direction: column; gap: 4px;">
-                  @for (att of d.attachments; track $index) {
-                    <a [href]="apiUrl + '/api/ews/upload/' + att.saved_name" 
-                       [target]="isViewable(att.saved_name) ? '_blank' : '_self'"
-                       [attr.download]="!isViewable(att.saved_name) ? att.original_name : null"
-                       style="font-size: 11px; text-decoration: none; color: var(--blue); background: var(--bg); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border); width: fit-content; display: inline-flex; align-items: center; gap: 4px;">
-                      <i class="pi pi-download"></i> {{ att.original_name }}
-                    </a>
-                  }
-                </div>
+          @if (q.type === 'yesno') {
+            <div class="flex gap-3">
+              @for (opt of ['Yes', 'No']; track opt) {
+                <label class="flex align-items-center gap-1.5 cursor-pointer text-sm font-semibold text-700">
+                  <input type="radio" [name]="'qd_' + q.id" [value]="opt" [(ngModel)]="answersMap[q.id]" /> {{ opt }}
+                </label>
               }
             </div>
-            @if ((ewsState.isRole('ro') || ewsState.isRole('cro')) && d.status === 'Pending') {
-              <div style="display: flex; gap: 8px;">
-                <button class="btn btn-green btn-sm" (click)="acceptDispute(d)" [disabled]="disputeLoading[d.id] === 'accept'"><i *ngIf="disputeLoading[d.id] === 'accept'" class="pi pi-spin pi-spinner" style="margin-right: 4px"></i> Accept dispute</button>
-                <button class="btn btn-red btn-sm" (click)="rejectDispute(d)" [disabled]="disputeLoading[d.id] === 'reject'"><i *ngIf="disputeLoading[d.id] === 'reject'" class="pi pi-spin pi-spinner" style="margin-right: 4px"></i> Reject dispute</button>
-              </div>
-            }
           }
-        </div>
-      </div>
-    }
-  
-  </div> <!-- END RIGHT COLUMN -->
-  </div> <!-- END GRID -->
+          @if (q.type === 'list') {
+            <p-select [(ngModel)]="answersMap[q.id]" [options]="q.options" placeholder="Select an option" styleClass="w-full"></p-select>
+          }
+          @if (q.type === 'numeric') {
+            <p-inputnumber [(ngModel)]="answersMap[q.id]" [useGrouping]="false" styleClass="w-full"></p-inputnumber>
+          }
+          @if (q.type === 'text') {
+            <input pInputText [(ngModel)]="answersMap[q.id]" placeholder="Enter text" class="w-full" />
+          }
+          @if (q.type === 'date') {
+            <p-datepicker [(ngModel)]="answersMap[q.id]" dateFormat="dd-M-yy" [showIcon]="true" styleClass="w-full"></p-datepicker>
+          }
 
-    <!-- Top Row: CBS Auto-Detection (L1) and RO Actions -->
-    <div style="display: flex; gap: 24px; margin-bottom: 24px; align-items: stretch;">
-      <!-- Left: CBS Auto-Detection (L1) -->
-      <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
-        <div style="border: 1px solid #bfdbfe; border-radius: 12px; background: #fff; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.05); height: 100%; display: flex; flex-direction: column;">
-          <div style="background: linear-gradient(90deg, #eff6ff 0%, #fff 100%); border-bottom: 1px solid #dbeafe; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <div style="background: #3b82f6; color: white; width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px;">L1</div>
-              <span style="font-size: 14px; font-weight: 700; color: #1e40af;">CBS Auto-Detection ({{ cbsSignals().length }})</span>
-            </div>
-            <span style="font-size: 11px; font-weight: 600; color: #3b82f6; background: #dbeafe; padding: 4px 10px; border-radius: 20px;">Read Only</span>
-          </div>
-          <div style="padding: 16px; flex-grow: 1; overflow-y: auto;">
-            @if (cbsSignals().length === 0) {
-              <div style="padding: 20px; text-align: center; color: #9ca3af; font-size: 13px; font-weight: 500;">No CBS Auto-Signals Detected</div>
-            }
-            @for (sig of cbsSignals(); track $index) {
-              <div style="padding: 14px; background: #fafafa; border: 1px solid #f5f5f5; border-radius: 8px; margin-bottom: 12px; border-left: 3px solid #3b82f6;">
-                <div style="font-size: 13px; font-weight: 600; color: #1f2937; margin-bottom: 8px;">
-                  @if (sig.rules && sig.rules.length > 0) {
-                    @for (r of sig.rules; track $index) {
-                      <div style="margin-bottom: 4px;"><span style="color: #3b82f6; margin-right: 6px;">•</span>{{ r.name || r }}</div>
-                    }
-                  } @else {
-                    <span style="color: #3b82f6; margin-right: 6px;">•</span>{{ sig.rule }}
-                  }
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                  <span style="font-size: 12px; font-weight: 700; color: #0369a1; background: #e0f2fe; padding: 2px 8px; border-radius: 4px; border: 1px solid #bae6fd;">{{ sig.result }}</span>
-                </div>
-                <div style="font-size: 12px; font-weight: 600; color: #6b7280; display: flex; align-items: center; gap: 4px;">
-                  <i class="pi pi-arrow-right" style="font-size: 10px;"></i> {{ sig.signal }}
-                </div>
-              </div>
-            }
-          </div>
-        </div>
-      </div>
-
-      <!-- Right: RO Actions & Escalation -->
-      @if (ewsState.isRole('ro') && account()?.status && account()?.status !== 'Normal') {
-        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
-          <div class="layer-block layer-ro" style="height: 100%; display: flex; flex-direction: column; margin-bottom: 0;">
-            <div class="layer-head" style="flex-shrink: 0;">
-              <span><span class="src-manual">RO</span> RO Actions & Escalation</span>
-            </div>
-            <div class="layer-body" style="flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 16px;">
-              <div>
-                <div class="fg">
-                  <label class="fl">RO remarks</label>
-                  <textarea rows="3" placeholder="Overall observations about this account..." style="width: 100%" [(ngModel)]="roRemarks"></textarea>
-                </div>
-                <div class="fg" style="margin-top: 14px">
-                  <label class="fl">Evidence Upload</label>
-                  <div class="upload-zone" style="position: relative; text-align: center; border: 2px dashed var(--border); padding: 30px; border-radius: var(--radius); background: var(--bg); cursor: pointer;">
-                    <div class="upload-icon" style="color: var(--blue); margin-bottom: 12px;"><i class="pi pi-cloud-upload" style="font-size: 32px"></i></div>
-                    <div style="font-size:15px;font-weight:600;margin-bottom:4px">Drop your files here</div>
-                    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Supports PDF, Images, Excel — max 10MB</div>
-                    <button class="btn btn-primary btn-sm" style="pointer-events: none;">Choose file</button>
-                    <input type="file" id="roEvidenceUpload" multiple style="opacity: 0; position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: pointer;" (change)="onFilesSelected($event)">
-                  </div>
-                  <div *ngIf="selectedFiles.length" style="margin-top: 8px; font-size: 13px; color: var(--text);">
-                    <div *ngFor="let f of selectedFiles; let i = index" style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                      <i class="pi pi-file"></i> {{ f.name }}
-                      <i class="pi pi-times" style="color: var(--red); cursor: pointer;" (click)="removeFile(i)" title="Remove file"></i>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div style="display: flex; gap: 8px; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px; align-items: center; flex-wrap: wrap; flex-shrink: 0;">
-                <select [(ngModel)]="selectedRisk" style="width: 120px;">
-                  <option *ngFor="let r of riskOptions" [ngValue]="r.value">{{ r.label }}</option>
-                </select>
-                <button class="btn btn-primary" (click)="sendForInvestigation()" [disabled]="isSending"><i *ngIf="isSending" class="pi pi-spin pi-spinner" style="margin-right: 4px"></i><i *ngIf="!isSending" class="pi pi-search"></i> Send for investigation</button>
-                <button class="btn btn-green" (click)="markNoRisk()" [disabled]="isMarking"><i *ngIf="isMarking" class="pi pi-spin pi-spinner" style="margin-right: 4px"></i><i *ngIf="!isMarking" class="pi pi-check-circle"></i> No risk</button>
-                <button class="btn btn-red" (click)="escalateToCro()" [disabled]="isEscalating"><i *ngIf="isEscalating" class="pi pi-spin pi-spinner" style="margin-right: 4px"></i><i *ngIf="!isEscalating" class="pi pi-arrow-up"></i> Escalate to CRO</button>
-              </div>
-            </div>
-          </div>
+          @if (answersMap[q.id] !== undefined && answersMap[q.id] !== null && answersMap[q.id] !== '') {
+            <small class="text-green-600 block mt-2 font-semibold"><i class="pi pi-check-circle mr-1"></i> Answered</small>
+          }
         </div>
       }
     </div>
 
-
-<!-- Middle: AuditPro (L2) Full Width -->
-    <div style="margin-bottom: 24px;">
-      <div style="border: 1px solid #fecaca; border-radius: 12px; background: #fff; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.05); display: flex; flex-direction: column;">
-        <div style="background: linear-gradient(90deg, #fef2f2 0%, #fff 100%); border-bottom: 1px solid #fee2e2; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
-          <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="background: #ef4444; color: white; width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px;">L2</div>
-            <span style="font-size: 14px; font-weight: 700; color: #991b1b;">AuditPro Triggers ({{ auditSignals().length }})</span>
-          </div>
-          <span style="font-size: 11px; font-weight: 600; color: #ef4444; background: #fee2e2; padding: 4px 10px; border-radius: 20px;">Read Only</span>
-        </div>
-        <div style="padding: 16px; flex-grow: 1; overflow-y: auto; max-height: 400px;">
-          @if (auditSignals().length === 0) {
-            <div style="padding: 20px; text-align: center; color: #9ca3af; font-size: 13px; font-weight: 500;">No AuditPro Triggers Detected</div>
-          }
-          @for (sig of auditSignals(); track $index) {
-            <div style="padding: 14px; background: #fafafa; border: 1px solid #f5f5f5; border-radius: 8px; margin-bottom: 12px; border-left: 3px solid #ef4444;">
-              <div style="font-size: 13px; font-weight: 600; color: #1f2937; margin-bottom: 8px;">{{ sig.question }}</div>
-              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                <span style="font-size: 12px; font-weight: 700; color: #b91c1c; background: #fef2f2; padding: 2px 8px; border-radius: 4px; border: 1px solid #fecaca;">{{ sig.answer }}</span>
-              </div>
-              <div style="font-size: 12px; font-weight: 600; color: #6b7280; display: flex; align-items: center; gap: 4px;">
-                <i class="pi pi-arrow-right" style="font-size: 10px;"></i> {{ sig.signal }}
-              </div>
-            </div>
-          }
+    <ng-template pTemplate="footer">
+      <div class="flex align-items-center justify-content-between w-full pt-2">
+        <small class="text-500"><i class="pi pi-shield text-indigo-500 mr-1"></i>Answers stored securely.</small>
+        <div class="flex gap-2">
+          <button pButton pRipple label="Cancel" class="p-button-outlined p-button-secondary" (click)="showAssessmentDialog = false"></button>
+          <button pButton pRipple [label]="isSavingAnswers ? 'Saving...' : 'Save Answers'" icon="pi pi-save" [loading]="isSavingAnswers" (click)="saveAccountAnswers()" class="p-button-primary"></button>
         </div>
       </div>
-    </div>
-
-    
-<!-- ═══ API Verification Card ═══ -->
-    <div class="layer-block" style="border: 1.5px solid #10b981; border-radius: 14px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); margin-bottom: 20px;">
-      <div style="padding: 24px; display: flex; align-items: center; justify-content: space-between;">
-        <div style="display: flex; align-items: center; gap: 16px;">
-          <div style="width: 48px; height: 48px; border-radius: 12px; background: #10b981; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
-            <i class="pi pi-check-circle" style="color: white; font-size: 24px;"></i>
-          </div>
-          <div>
-            <div style="font-size: 18px; font-weight: 800; color: #064e3b; margin-bottom: 4px;">API Verification</div>
-            <div style="font-size: 13px; color: #065f46;">Verify PAN, GSTIN, UDYAM, CIN, DIN, and Real Estate/Land Records.</div>
-          </div>
-        </div>
-        <button (click)="openApiVerification()" class="api-verify-trigger-btn">
-          <i class="pi pi-verified"></i> Run Verification
-        </button>
-      </div>
-    </div>
-
-    <!-- ═══ Assessment Questionnaire Card ═══ -->
-    @if (accountQuestions().length > 0 && ewsState.isRole('ro', 'cro', 'admin')) {
-      <div class="layer-block" style="border: 1.5px solid #6366f1; border-radius: 14px; background: linear-gradient(135deg, #fafafe 0%, #f0f1ff 100%); margin-bottom: 20px;">
-        <div style="padding: 24px; display: flex; align-items: center; justify-content: space-between;">
-          <div style="display: flex; align-items: center; gap: 16px;">
-            <div style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, #4F46E5, #7C3AED); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(99,102,241,0.3);">
-              <i class="pi pi-list-check" style="color: white; font-size: 22px;"></i>
-            </div>
-            <div>
-              <div style="font-size: 18px; font-weight: 800; color: #312e81; margin-bottom: 4px;">RO Pre-Assessment</div>
-              <div style="font-size: 13px; color: #4338ca;">
-                {{ answeredQuestionsCount }} / {{ accountQuestions().length }} answered
-              </div>
-            </div>
-          </div>
-          <button (click)="showAssessmentDialog = true" class="p-button p-button-outlined" style="border-color:#6366f1; color:#4F46E5;">
-            <i class="pi pi-pencil" style="margin-right:6px;"></i> Open Assessment
-          </button>
-        </div>
-      </div>
-    }
-
-    <!-- ═══ Assessment Dialog ═══ -->
-    <p-dialog
-      [(visible)]="showAssessmentDialog"
-      [modal]="true"
-      [style]="{width: '700px'}"
-      [maximizable]="true"
-      header="RO Pre-Assessment Questionnaire ({{ answeredQuestionsCount }} / {{ accountQuestions().length }} Answered)"
-      (onHide)="showAssessmentDialog = false">
-
-      <div style="max-height: 65vh; overflow-y: auto; padding: 4px 0;">
-
-        <!-- Grouped RO Triggers -->
-        @if (roGroupedSignals().length > 0) {
-          <p-message severity="error" styleClass="w-full mb-3" [text]="'⚠ ' + roGroupedSignals().length + ' signal(s) triggered by your answers'"></p-message>
-          @for (sigGroup of roGroupedSignals(); track sigGroup.signal_id) {
-            <p-panel [toggleable]="true" [collapsed]="true" styleClass="mb-2"
-                     [header]="'Signal #' + sigGroup.signal_number + ' — ' + sigGroup.signal_name">
-              @for (rule of sigGroup.rules; track $index) {
-                <p style="margin: 4px 0; font-size: 13px;">• {{ getQuestionText(rule) }}
-                  @if (rule.risk) { <span style="font-weight:700; font-size:11px; margin-left:6px;">{{ rule.risk }}</span> }
-                </p>
-              }
-            </p-panel>
-          }
-          <p-divider></p-divider>
-        }
-
-        <p style="font-size: 13px; color: #6366f1; margin-bottom: 16px;">
-          <i class="pi pi-info-circle" style="margin-right:4px;"></i>
-          Fill in all fields below. Answers are used by the Rule Engine for risk evaluation.
-        </p>
-
-        @for (q of accountQuestions(); track q.id; let i = $index) {
-          <div style="margin-bottom: 20px;">
-            <label style="display:block; font-weight: 600; margin-bottom: 8px; font-size:14px;">
-              {{ i + 1 }}. {{ q.question_desc }}
-              <small style="color:#94a3b8; font-weight:400; margin-left:6px; font-family:monospace;">{{ q.reference_name }}</small>
-            </label>
-
-            @if (q.type === 'yesno') {
-              <div style="display: flex; gap: 12px;">
-                @for (opt of ['Yes', 'No']; track opt) {
-                  <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:14px;">
-                    <input type="radio" [name]="'qd_' + q.id" [value]="opt" [(ngModel)]="answersMap[q.id]" /> {{ opt }}
-                  </label>
-                }
-              </div>
-            }
-            @if (q.type === 'list') {
-              <p-select [(ngModel)]="answersMap[q.id]" [options]="q.options" placeholder="Select an option" styleClass="w-full"></p-select>
-            }
-            @if (q.type === 'numeric') {
-              <p-inputnumber [(ngModel)]="answersMap[q.id]" [useGrouping]="false" styleClass="w-full"></p-inputnumber>
-            }
-            @if (q.type === 'text') {
-              <input pInputText [(ngModel)]="answersMap[q.id]" placeholder="Enter text" style="width:100%;" />
-            }
-            @if (q.type === 'date') {
-              <p-datepicker [(ngModel)]="answersMap[q.id]" dateFormat="dd-M-yy" [showIcon]="true" styleClass="w-full"></p-datepicker>
-            }
-
-            @if (answersMap[q.id] !== undefined && answersMap[q.id] !== null && answersMap[q.id] !== '') {
-              <small style="color: #16a34a;"><i class="pi pi-check-circle"></i> Answered</small>
-            }
-          </div>
-        }
-      </div>
-
-      <ng-template pTemplate="footer">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <small style="color:#94a3b8;"><i class="pi pi-shield" style="color:#6366f1; margin-right:4px;"></i>Answers stored securely and referenced in the rule engine.</small>
-          <div style="display:flex; gap:8px;">
-            <p-button label="Cancel" [outlined]="true" severity="secondary" (onClick)="showAssessmentDialog = false"></p-button>
-            <p-button
-              [label]="isSavingAnswers ? 'Saving...' : 'Save Answers'"
-              icon="pi pi-save"
-              [loading]="isSavingAnswers"
-              (onClick)="saveAccountAnswers()"
-              severity="help">
-            </p-button>
-          </div>
-        </div>
-      </ng-template>
-    </p-dialog>
-
-
-</div> <!-- END *ngIf -->
+    </ng-template>
+  </p-drawer>
+</div>
 
 <app-api-verification-modal></app-api-verification-modal>

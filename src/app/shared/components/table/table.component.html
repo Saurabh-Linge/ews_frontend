@@ -10,33 +10,22 @@
 
   <!-- Detached Toolbar -->
   @if (showToolbar()) {
-  <div
-    style="
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      justify-content: space-between;
-      width: 100%;
-      gap: 0.5rem;
-      padding: 0.25rem;
-      margin-bottom: 0.5rem;
-    "
-  >
-    <div style="display: flex; flex-direction: row; align-items: center; gap: 0.5rem">
-      <p-iconfield iconPosition="left">
-        <p-inputicon styleClass="pi pi-search" />
+  <div class="table-toolbar">
+    <div class="table-toolbar-left">
+      <div class="search-input-wrapper relative flex align-items-center" style="min-width: 200px; max-width: 280px;">
+        <i class="pi pi-search search-input-icon"></i>
         <input
           #searchInput
           pInputText
           type="text"
           (input)="handleSearch($event)"
           placeholder="Search (Ctrl+F)"
-          style="width: auto; height: 2.5rem"
+          class="w-full search-input-field"
         />
-      </p-iconfield>
+      </div>
       <ng-content select="[toolbar-actions]"></ng-content>
     </div>
-    <div style="display: flex; flex-direction: row; align-items: center; gap: 0.5rem">
+    <div class="table-toolbar-right">
       <button
         *ngIf="showRefreshButton()"
         pButton
@@ -46,7 +35,6 @@
         (click)="handleRefresh()"
         pTooltip="Refresh Data"
         tooltipPosition="bottom"
-        style="height: 2.5rem;"
       ></button>
       <button
         *ngIf="showExportButton()"
@@ -58,7 +46,6 @@
         (click)="handleExport()"
         pTooltip="Export to Excel"
         tooltipPosition="bottom"
-        style="height: 2.5rem;"
       ></button>
       <button
         *ngIf="showAddButton()"
@@ -68,7 +55,6 @@
         icon="pi pi-plus"
         class="p-button-primary"
         (click)="handleAdd()"
-        style="height: 2.5rem; white-space: nowrap;"
       ></button>
     </div>
   </div>
@@ -85,7 +71,7 @@
       [rows]="rows()"
       [paginator]="paginator() && !virtualScroll()"
       [rowsPerPageOptions]="rowsPerPageOptions"
-      [globalFilterFields]="globalFilterFields()"
+      [globalFilterFields]="computedGlobalFilterFields()"
       [loading]="loading()"
       [virtualScroll]="virtualScroll()"
       [virtualScrollItemSize]="virtualScrollItemSize()"
@@ -105,6 +91,8 @@
       [dataKey]="dataKey()"
       [rowGroupMode]="rowGroupMode()"
       [groupRowsBy]="groupRowsBy()"
+      [selection]="selection()"
+      (selectionChange)="selectionChange.emit($event)"
     >
       <!-- Distinct Header -->
       <ng-template pTemplate="header" let-columns>
@@ -128,17 +116,23 @@
         </tr>
 
         <tr>
-          <!-- Expansion Toggler Header -->
-          <th *ngIf="rowExpansionTemplate" style="width: 3rem"></th>
+          <!-- Selection Checkbox Header -->
+          <th *ngIf="selectable()" style="width: 3rem; min-width: 3rem; max-width: 3rem; text-align: center">
+            <p-tableHeaderCheckbox></p-tableHeaderCheckbox>
+          </th>
 
-          <!-- Actions Column Header (Left Side) -->
+          <!-- Expansion Toggler Header -->
+          <th *ngIf="rowExpansionTemplate" style="width: 3rem; min-width: 3rem; max-width: 3rem"></th>
+
+          <!-- Actions Column Header -->
           @if (actions().length) {
             <th
-              [style.width]="actionsWidth()"
-              [style.min-width]="actionsWidth() === 'auto' ? 'auto' : actionsWidth()"
+              [style.width]="computedActionsWidth()"
+              [style.min-width]="computedActionsWidth()"
+              [style.max-width]="computedActionsWidth()"
               style="text-align: center;"
             >
-              ACTIONS
+              {{ actionDisplayMode() === 'buttons' ? 'Actions' : 'Action' }}
             </th>
           }
 
@@ -147,6 +141,8 @@
             *ngFor="let col of actionColumns()"
             [pSortableColumn]="col.sortable !== false ? col.sortField || col.field : undefined"
             [style.width]="col.width || 'auto'"
+            [style.min-width]="col.width ? col.width : null"
+            [style.max-width]="col.width ? col.width : null"
             [style.text-align]="getAlignment(col, true)"
             [class]="col.cssClass || ''"
           >
@@ -180,13 +176,15 @@
           </th>
 
           <!-- Serial Number Header -->
-          <th *ngIf="showSerialNumber()" style="width: 4rem; text-align: center">SR NO</th>
+          <th *ngIf="showSerialNumber()" style="width: 4rem; min-width: 4rem; max-width: 4rem; text-align: center">Sr No</th>
 
           <!-- Data Columns -->
           <th
             *ngFor="let col of dataColumns()"
             [pSortableColumn]="col.sortable !== false ? col.sortField || col.field : undefined"
             [style.width]="col.width || 'auto'"
+            [style.min-width]="col.width ? col.width : null"
+            [style.max-width]="col.width ? col.width : null"
             [style.text-align]="getAlignment(col, true)"
             [class]="col.cssClass || ''"
           >
@@ -257,9 +255,14 @@
         let-rowIndex="rowIndex"
         let-expanded="expanded"
       >
-        <tr [style.height.px]="virtualScroll() ? virtualScrollItemSize() : 'auto'">
+        <tr [style.height.px]="virtualScroll() ? virtualScrollItemSize() : 'auto'" [class]="getRowClass(rowData)">
+          <!-- Selection Checkbox Cell -->
+          <td *ngIf="selectable()" style="width: 3rem; min-width: 3rem; max-width: 3rem; text-align: center">
+            <p-tableCheckbox [value]="rowData"></p-tableCheckbox>
+          </td>
+
           <!-- Expansion Toggler Cell -->
-          <td *ngIf="rowExpansionTemplate">
+          <td *ngIf="rowExpansionTemplate" style="width: 3rem; min-width: 3rem; max-width: 3rem">
             <button
               type="button"
               pButton
@@ -281,25 +284,41 @@
           </ng-container>
 
           <ng-template #defaultBody>
-            <!-- Actions Cell (Left Side) -->
+            <!-- Actions Cell -->
             @if (actions().length) {
-              <td style="text-align: center; white-space: nowrap;" [style.width]="actionsWidth()">
-                @if (actionDisplayMode() === 'buttons') {
-                  <div class="flex gap-1 justify-content-center align-items-center">
-                    @for (action of actions(); track action.label) {
+              @if (actionDisplayMode() === 'buttons') {
+                <td 
+                  [style.width]="computedActionsWidth()" 
+                  [style.min-width]="computedActionsWidth()" 
+                  [style.max-width]="computedActionsWidth()" 
+                  style="text-align: center; white-space: nowrap;"
+                >
+                  <div class="flex align-items-center justify-content-center gap-1">
+                    @for (action of actions(); track action) {
+                      @if (action.visible === undefined || action.visible(rowData)) {
                       <button
                         pButton
                         pRipple
-                        [icon]="getActionIcon(action, rowData)"
+                        [icon]="isRowLoading(rowData, action.name) ? 'pi pi-spin pi-spinner' : getActionIcon(action, rowData)"
                         [label]="showActionLabels() ? getActionLabel(action, rowData) : ''"
                         class="p-button-text p-button-secondary p-button-rounded table-action-btn"
+                        [disabled]="isRowLoading(rowData, action.name) || (action.disabled ? action.disabled(rowData) : false)"
                         (click)="action.command(rowData); $event.stopPropagation()"
                         [pTooltip]="getActionLabel(action, rowData)"
                         tooltipPosition="top"
                       ></button>
+                      }
                     }
                   </div>
-                } @else {
+                </td>
+              } @else {
+                <td 
+                  [style.width]="computedActionsWidth()"
+                  [style.min-width]="computedActionsWidth()"
+                  [style.max-width]="computedActionsWidth()"
+                  style="text-align: center;"
+                >
+                  <!-- Menu mode: Show three dots menu (default) -->
                   <button
                     pButton
                     pRipple
@@ -307,12 +326,18 @@
                     class="p-button-text p-button-secondary p-button-rounded"
                     (click)="showMenu($event, rowData, menu)"
                   ></button>
-                }
-              </td>
+                </td>
+              }
             }
 
             <!-- Action Columns (Left Side) -->
-            <td *ngFor="let col of actionColumns()" [style.text-align]="getAlignment(col, false)">
+            <td
+              *ngFor="let col of actionColumns()"
+              [style.width]="col.width || 'auto'"
+              [style.min-width]="col.width ? col.width : null"
+              [style.max-width]="col.width ? col.width : null"
+              [style.text-align]="getAlignment(col, false)"
+            >
               <!-- ✅ CUSTOM PRINT COLUMN -->
               <ng-container *ngIf="col.field === '_print'; else normalAction">
                 <div class="print-container">
@@ -349,15 +374,79 @@
             </td>
 
             <!-- Serial Number Cell -->
-            <td *ngIf="showSerialNumber()" style="text-align: center">{{ rowIndex + 1 }}</td>
+            <td *ngIf="showSerialNumber()" style="width: 4rem; min-width: 4rem; max-width: 4rem; text-align: center">{{ rowIndex + 1 }}</td>
 
-            <!-- Data Columns -->
             <td
               *ngFor="let col of dataColumns()"
+              [style.width]="col.width || 'auto'"
+              [style.min-width]="col.width ? col.width : null"
+              [style.max-width]="col.width ? col.width : null"
               [style.text-align]="getAlignment(col, false)"
               [class]="col.cssClass || ''"
             >
-              {{ formatValue(rowData[col.field], col) }}
+              <ng-container [ngSwitch]="col.type">
+                <!-- Badge / Status Type -->
+                <ng-container *ngSwitchCase="'badge'">
+                  <span [class]="getBadgeClass(rowData[col.field])">
+                    {{ formatValue(rowData[col.field], col) }}
+                  </span>
+                </ng-container>
+                
+                <ng-container *ngSwitchCase="'status'">
+                  <span [class]="getBadgeClass(rowData[col.field])">
+                    {{ formatValue(rowData[col.field], col) }}
+                  </span>
+                </ng-container>
+
+                 <!-- Boolean Action Type -->
+                <ng-container *ngSwitchCase="'boolean_action'">
+                  <button
+                    pButton
+                    pRipple
+                    [icon]="rowData[col.field] ? (col.booleanActionTrueIcon || 'pi pi-check') : (col.booleanActionFalseIcon || 'pi pi-times')"
+                    [label]="rowData[col.field] ? (col.booleanActionTrueLabel !== undefined ? col.booleanActionTrueLabel : 'Yes') : (col.booleanActionFalseLabel !== undefined ? col.booleanActionFalseLabel : 'No')"
+                    [class]="'p-button-text p-button-sm p-button-rounded ' + (rowData[col.field] ? (col.booleanActionTrueClass || 'p-button-success') : (col.booleanActionFalseClass || 'p-button-danger'))"
+                    (click)="onActionClick.emit({ name: col.actionName || col.field, row: rowData }); $event.stopPropagation()"
+                    [pTooltip]="col.tooltip || (rowData[col.field] ? (col.booleanActionTrueLabel || 'Yes') : (col.booleanActionFalseLabel || 'No'))"
+                    tooltipPosition="top"
+                  ></button>
+                </ng-container>
+
+                <!-- Boolean Toggle Type -->
+                <ng-container *ngSwitchCase="'boolean_toggle'">
+                  <div class="flex justify-content-center align-items-center w-full" style="height: 2.5rem;">
+                    <p-toggleswitch
+                      [inputId]="col.field + '_' + rowIndex"
+                      [name]="col.field + '_' + rowIndex"
+                      [ngModelOptions]="{standalone: true}"
+                      [(ngModel)]="rowData[col.field]"
+                      (onChange)="onActionClick.emit({ name: col.actionName || col.field, row: rowData })"
+                      (click)="$event.stopPropagation()"
+                    ></p-toggleswitch>
+                  </div>
+                </ng-container>
+
+                <!-- Date Input Editor Type -->
+                <ng-container *ngSwitchCase="'date_input'">
+                  <div class="flex justify-content-center align-items-center w-full" (click)="$event.stopPropagation()">
+                    <p-datepicker
+                      [(ngModel)]="rowData[col.field]"
+                      [ngModelOptions]="{standalone: true}"
+                      dateFormat="dd/mm/yy"
+                      appendTo="body"
+                      (ngModelChange)="onActionClick.emit({ name: col.actionName || col.field + '_change', row: rowData })"
+                      styleClass="w-full"
+                      [inputStyleClass]="'p-1 border rounded text-xs w-full font-medium text-center'"
+                      [style]="{ width: '135px' }"
+                    ></p-datepicker>
+                  </div>
+                </ng-container>
+
+                <!-- Default Text -->
+                <ng-container *ngSwitchDefault>
+                  {{ formatValue(rowData[col.field], col) }}
+                </ng-container>
+              </ng-container>
             </td>
           </ng-template>
         </tr>
@@ -387,18 +476,27 @@
           <td *ngFor="let col of columns()" [style.text-align]="getAlignment(col, false)">
             <p-skeleton styleClass="w-full" height="1.5rem"></p-skeleton>
           </td>
-          <td style="text-align: center" *ngIf="actions().length">
-            <p-skeleton shape="w-full" height="1.5rem"></p-skeleton>
-          </td>
+          <!-- Actions Loading Cells -->
+          @if (actions().length) {
+            @if (actionDisplayMode() === 'buttons') {
+              <td style="text-align: center; width: auto;">
+                <div class="flex align-items-center justify-content-center gap-1">
+                  <p-skeleton *ngFor="let action of actions()" shape="circle" size="2rem"></p-skeleton>
+                </div>
+              </td>
+            } @else {
+              <td style="text-align: center; width: 4rem;">
+                <p-skeleton shape="circle" size="2rem"></p-skeleton>
+              </td>
+            }
+          }
         </tr>
       </ng-template>
 
       <ng-template pTemplate="emptymessage">
         <tr>
           <td
-            [attr.colspan]="
-              columns().length + (showSerialNumber() ? 2 : 1) + (rowExpansionTemplate ? 1 : 0)
-            "
+            [attr.colspan]="totalColumns()"
             class="text-center py-6"
           >
             <div class="flex justify-content-center">
@@ -422,7 +520,7 @@
       </ng-template>
 
       <ng-template pTemplate="paginatorleft">
-        <span class="text-xs text-color-secondary">Total Records: {{ totalRecords() }}</span>
+        <span class="text-xs text-color-secondary">Total Records: {{ displayTotalRecords() }}</span>
       </ng-template>
     </p-table>
   </div>

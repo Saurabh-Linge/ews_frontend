@@ -38,6 +38,17 @@ import { AuthService } from '../../../core/services/auth/auth.service';
         </a>
       </div>
 
+      <!-- System Date & Time Pill -->
+      <div class="topbar-center hide-on-small">
+        <div class="software-date-pill">
+          <i class="pi pi-calendar" style="font-size: 10px;"></i>
+          <span>{{ currentDate }}</span>
+          <span style="opacity: 0.5; margin: 0 2px;">|</span>
+          <i class="pi pi-clock" style="font-size: 10px;"></i>
+          <span>{{ currentTime }}</span>
+        </div>
+      </div>
+
       <div class="layout-topbar-actions">
         <!-- Language Dropdown -->
         <p-select
@@ -240,19 +251,26 @@ import { AuthService } from '../../../core/services/auth/auth.service';
       }
     }
 
-    .software-date-pill {
+    .topbar-center {
+      flex: 1;
       display: flex;
       align-items: center;
+      justify-content: center;
+    }
+
+    .software-date-pill {
+      display: inline-flex;
+      align-items: center;
       gap: 6px;
-      background: rgba(255, 255, 255, 0.12);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      padding: 4px 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      padding: 5px 12px;
       border-radius: 999px;
-      color: #ffffff;
+      color: rgba(255, 255, 255, 0.9);
       font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      margin-left: 1rem;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      white-space: nowrap;
     }
   `]
 })
@@ -267,6 +285,25 @@ export class AppTopbar {
     { label: 'मराठी', value: 'mr' }
   ];
   selectedLanguage = 'en';
+
+  currentDate = '';
+  currentTime = '';
+  private clockInterval: any;
+
+  constructor() {
+    this.updateClock();
+    this.clockInterval = setInterval(() => this.updateClock(), 1000);
+  }
+
+  ngOnDestroy() {
+    if (this.clockInterval) clearInterval(this.clockInterval);
+  }
+
+  private updateClock() {
+    const now = new Date();
+    this.currentDate = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    this.currentTime = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  }
 
   notifications = signal<any[]>([]);
   unreadCount = signal<number>(43);

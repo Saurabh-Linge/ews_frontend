@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, input, computed, effect, signal, Output, ViewEncapsulation, ViewChild, ElementRef, HostListener, ContentChild, TemplateRef, inject } from '@angular/core';
+import { Component, EventEmitter, input, computed, effect, signal, Output, ViewEncapsulation, ViewChild, ElementRef, HostListener, ContentChild, TemplateRef, inject, OnInit, OnDestroy } from '@angular/core';
+import { KeyboardShortcutService } from '../../../core/services/keyboard-shortcut';
 import { FormsModule } from '@angular/forms';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
@@ -13,7 +14,8 @@ import { MessageModule } from 'primeng/message';
 import { TooltipModule } from 'primeng/tooltip';
 import { MenuItem } from 'primeng/api';
 import { ExportService } from '../../../core/services/export/export.service';
-
+import { ToggleSwitch } from 'primeng/toggleswitch';
+import { DatePickerModule } from 'primeng/datepicker';
 
 export interface TableColumn {
   /** Field name in the data object */
@@ -46,6 +48,13 @@ export interface TableColumn {
   tooltip?: string;
   /** Custom CSS class for the column */
   cssClass?: string;
+  /** Properties for boolean_action type */
+  booleanActionTrueIcon?: string;
+  booleanActionFalseIcon?: string;
+  booleanActionTrueLabel?: string;
+  booleanActionFalseLabel?: string;
+  booleanActionTrueClass?: string;
+  booleanActionFalseClass?: string;
 }
 
 export interface TableAction {
@@ -96,15 +105,17 @@ export interface TableStyleConfig {
     ToolbarModule,
     IconFieldModule,
     InputIconModule,
-    MenuModule,
     MessageModule,
-    TooltipModule
+    TooltipModule,
+    ToggleSwitch,
+    MenuModule,
+    DatePickerModule
   ],
   templateUrl: './table.component.html',
   styleUrls: ['./table.component.scss'],
   encapsulation: ViewEncapsulation.None
 })
-export class TableComponent {
+export class TableComponent implements OnInit, OnDestroy {
   data = input<any[]>([]);
   columns = input<TableColumn[]>([]);
   loading = input<boolean>(false);
@@ -112,6 +123,7 @@ export class TableComponent {
   rows = input<number>(10);
   globalFilterFields = input<string[]>([]);
   actions = input<TableAction[]>([]);
+  actionsWidth = input<string | undefined>();
   showAddButton = input<boolean>(true);
   showRefreshButton = input<boolean>(true);
   sortField = input<string | undefined>();
@@ -121,10 +133,15 @@ export class TableComponent {
   summaryColumns = input<string[]>([]);
   reportHeaders = input<string[]>([]);
 
+  // Selection Support
+  selectable = input<boolean>(false);
+  selection = input<any[]>([]);
+  @Output() selectionChange = new EventEmitter<any[]>();
+
   // Virtual Scroll Inputs
   virtualScroll = input<boolean>(false);
   virtualScrollItemSize = input<number>(46);
-  scrollHeight = input<string>('calc(100vh - 320px)');
+  scrollHeight = input<string>('flex');
   lazy = input<boolean>(false);
 
   // Custom Body Template
@@ -155,18 +172,38 @@ export class TableComponent {
   // Show serial number column
   showSerialNumber = input<boolean>(true);
 
+  rowClass = input<(rowData: any) => string>();
+
   // Action display mode: 'buttons' (default - individual buttons) or 'menu' (three dots)
   actionDisplayMode = input<'menu' | 'buttons'>('buttons');
-
-  // Custom actions column width (default: '6rem')
-  actionsWidth = input<string>('6rem');
 
   // Whether to show labels in buttons mode (default false for icon-only)
   showActionLabels = input<boolean>(false);
 
+  // Dynamically compute compact action column width based on action count
+  computedActionsWidth = computed(() => {
+    const customWidth = this.actionsWidth();
+    if (customWidth && customWidth !== 'auto') return customWidth;
+    const count = this.actions().length;
+    if (count === 0) return 'auto';
+    if (count === 1) return '4.5rem';
+    if (count === 2) return '5.5rem';
+    if (count === 3) return '6.5rem';
+    return `${count * 2.2 + 2}rem`;
+  });
+
   // Categorize columns for specialized rendering order
   actionColumns = computed(() => this.columns().filter(c => c.type === 'action'));
-  dataColumns = computed(() => this.columns().filter(c => c.type !== 'action' && c.field !== 'action' && c.field !== 'actions' && c.header?.toLowerCase() !== 'action' && c.header?.toLowerCase() !== 'actions'));
+  dataColumns = computed(() => this.columns().filter(c => c.type !== 'action'));
+
+  // Dynamically compute global filter fields from data columns if not explicitly provided
+  computedGlobalFilterFields = computed(() => {
+    const explicit = this.globalFilterFields();
+    if (explicit && explicit.length > 0) {
+      return explicit;
+    }
+    return this.dataColumns().map(c => c.field).filter(f => f && !f.startsWith('_'));
+  });
 
   // Computed scoped tokens for PrimeNG [dt] input
   scopedTokens = computed(() => {
@@ -190,16 +227,20 @@ export class TableComponent {
     if (this.showSerialNumber()) count++;
     if (this.actions().length) count++;
     if (this.rowExpansionTemplate) count++;
+    if (this.selectable()) count++;
     return count;
   });
 
   // Combined style class
   tableStyleClass = computed(() => {
-    const classes = ['p-datatable-sm', 'h-full'];
+    const classes = ['p-datatable-sm', 'h-full', 'flex', 'flex-column'];
     if (this.stickyHeader()) classes.push('sticky-header');
     if (this.styleConfig()?.cssClass) classes.push(this.styleConfig()!.cssClass!);
     return classes.join(' ');
   });
+
+  // Display total records: fallback to data length if not lazy
+  displayTotalRecords = computed(() => this.lazy() ? this.totalRecords() : this.data().length);
 
   @Output() onActionClick = new EventEmitter<{ name: string; row: any }>();
   @Output() onAdd = new EventEmitter<void>();
@@ -215,14 +256,39 @@ export class TableComponent {
   // Pagination Options
   rowsPerPageOptions = [10, 25, 50, 100];
 
+  private _activeMenu: any = null;
+  private _shortcutId: string | null = null;
+  private shortcuts = inject(KeyboardShortcutService);
+
+  ngOnInit(): void {
+    // Register Ctrl+N local shortcut — only active when this table shows the Add button
+    this._shortcutId = this.shortcuts.registerLocal({
+      key: 'ctrl+n',
+      description: 'New — Open add drawer',
+      handler: (event) => {
+        if (this.showAddButton()) {
+          event.preventDefault();
+          this.handleAdd();
+        }
+      }
+    });
+  }
+
   // Menu logic
   menuItems = computed<MenuItem[]>(() => {
-    return this.actions().map(action => ({
-      label: this.getActionLabel(action, this.activeRow()),
-      icon: this.getActionIcon(action, this.activeRow()),
-      styleClass: action.styleClass,
-      command: () => action.command(this.activeRow())
-    }));
+    const row = this.activeRow();
+    if (!row) return [];
+    
+    return this.actions()
+      .filter(action => action.visible === undefined || action.visible(row))
+      .map(action => ({
+        label: this.getActionLabel(action, row),
+        icon: this.isRowLoading(row, action.name) ? 'pi pi-spin pi-spinner' : this.getActionIcon(action, row),
+        styleClass: action.styleClass,
+        disabled: this.isRowLoading(row, action.name) || (action.disabled ? action.disabled(row) : false),
+        visible: action.visible ? action.visible(row) : true,
+        command: () => action.command(row)
+      }));
   });
 
   activeRow = signal<any>(null);
@@ -259,14 +325,13 @@ export class TableComponent {
     this.searchInput?.nativeElement?.focus();
   }
 
-  constructor() {
-    // Debug effect
-    effect(() => {
-      // console.log('TableComponent Data:', this.data().length);
-    });
+  getRowClass(rowData: any): string {
+    const customFn = this.rowClass();
+    return customFn ? customFn(rowData) : '';
   }
 
   isRowLoading(row: any, actionName?: string): boolean {
+    if (!row) return false;
     const key = this.dataKey() || 'id';
     const id = row[key];
     const loadingIds = this.loadingRowIds();
@@ -294,29 +359,25 @@ export class TableComponent {
   }
 
   handleRefresh() {
-    // 1. Clear Search Input UI
     if (this.searchInput) {
       this.searchInput.nativeElement.value = '';
     }
 
-    // 2. Reset Pagination internal state
     if (this.table) {
+      this.table.filterGlobal('', 'contains');
       this.table.first = 0;
     }
 
-    // 3. Notify parent to reload data
     this.onRefresh.emit();
   }
 
   handleSearch(event: Event) {
     const value = (event.target as HTMLInputElement).value;
 
-    // Clear existing timer
     if (this.searchDebounceTimer) {
       clearTimeout(this.searchDebounceTimer);
     }
 
-    // Debounce the search to prevent API overload when typing fast
     this.searchDebounceTimer = setTimeout(() => {
       if (!this.lazy() && this.table) {
         this.table.filterGlobal(value, 'contains');
@@ -326,9 +387,12 @@ export class TableComponent {
     }, this.searchDebounce());
   }
 
-  showMenu(event: MouseEvent, row: any, menu: any) {
-    this.activeRow.set(row);
-    menu.toggle(event);
+  showMenu(event: MouseEvent, rowData: any, menu: any) {
+    this.activeRow.set(rowData);
+    this._activeMenu = menu;
+    if (menu && menu.toggle) {
+      menu.toggle(event);
+    }
     event.stopPropagation();
   }
 
@@ -352,9 +416,6 @@ export class TableComponent {
     const isGrouped = this.rowGroupMode() === 'subheader' && !!groupBy;
 
     if (isGrouped) {
-      // Sort data by groupRowsBy if not already sorted
-      // (assuming sorted for now as p-table expectations)
-
       let currentGroupValue: any = null;
       let groupTotals: any = {};
       let grandTotals: any = {};
@@ -365,32 +426,25 @@ export class TableComponent {
         const rowGroupValue = row[groupBy!];
 
         if (rowGroupValue !== currentGroupValue) {
-          // New Group detected
-
-          // 1. Add Previous Group Footer
           if (currentGroupValue !== null) {
             dataToExport.push(this.createSummaryRow('footer', groupTotals, `Total for ${this.formatValue(currentGroupValue, this.columns().find(c => c.field === groupBy) || { field: groupBy!, header: '' })}`));
           }
 
-          // 2. Add New Group Header
           dataToExport.push({
             _rowType: 'header',
             _headerValue: this.formatValue(rowGroupValue, this.columns().find(c => c.field === groupBy) || { field: groupBy!, header: '' })
           });
 
-          // 3. Reset Group Totals
           currentGroupValue = rowGroupValue;
           groupTotals = {};
           summaryCols.forEach(col => groupTotals[col] = 0);
         }
 
-        // Add Data Row
         const formattedRow: any = { _rowType: 'data' };
         this.columns().forEach(col => {
           const val = row[col.field];
           formattedRow[col.field] = this.formatValue(val, col);
 
-          // Accumulate totals
           if (summaryCols.includes(col.field)) {
             const numericVal = Number(val) || 0;
             groupTotals[col.field] += numericVal;
@@ -399,14 +453,12 @@ export class TableComponent {
         });
         dataToExport.push(formattedRow);
 
-        // If it's the last row, add final group footer and grand total
         if (index === rawData.length - 1) {
           dataToExport.push(this.createSummaryRow('footer', groupTotals, `Total for ${this.formatValue(this.formatValue(currentGroupValue, this.columns().find(c => c.field === groupBy) || { field: groupBy!, header: '' }), this.columns().find(c => c.field === groupBy) || { field: groupBy!, header: '' })}`));
           dataToExport.push(this.createSummaryRow('grand-total', grandTotals, 'GRAND TOTAL'));
         }
       });
     } else {
-      // Flat data export
       let grandTotals: any = {};
       summaryCols.forEach(col => grandTotals[col] = 0);
 
@@ -436,15 +488,17 @@ export class TableComponent {
   }
 
   getActionLabel(action: TableAction, rowData: any): string {
+    if (!rowData) return typeof action.label === 'string' ? action.label : '';
     if (typeof action.label === 'function') {
-      return action.label(rowData);
+      try { return action.label(rowData); } catch { return ''; }
     }
     return action.label || '';
   }
 
   getActionIcon(action: TableAction, rowData: any): string {
+    if (!rowData) return typeof action.icon === 'string' ? action.icon : '';
     if (typeof action.icon === 'function') {
-      return action.icon(rowData);
+      try { return action.icon(rowData); } catch { return ''; }
     }
     return action.icon || '';
   }
@@ -475,8 +529,7 @@ export class TableComponent {
       case 'date':
         try {
           const date = new Date(value);
-          const format = col.pipeFormat || 'dd-MM-yyyy';
-          // Check if it's a custom pattern like dd-MM-yyyy or dd-MM-yyyy HH:mm
+          const format = col.pipeFormat || 'dd/MM/yyyy';
           if (format.includes('dd') || format.includes('MM') || format.includes('yyyy') || format.includes('HH') || format.includes('mm')) {
             return this.formatCustomDate(date, format);
           }
@@ -513,7 +566,9 @@ export class TableComponent {
         return value ? 'Yes' : 'No';
 
       case 'status':
-        return value === 1 ? 'Active' : (value === 0 ? 'Inactive' : value);
+        if (value === 1) return 'Active';
+        if (value === 0) return 'Inactive';
+        return String(value);
 
       case 'status_inv':
         return value === 0 ? 'Active' : (value === 1 ? 'Inactive' : value);
@@ -538,9 +593,6 @@ export class TableComponent {
     }
   }
 
-  /**
-   * Format date using custom pattern like dd-MM-yyyy HH:mm
-   */
   private formatCustomDate(date: Date, format: string): string {
     const day = date.getDate().toString().padStart(2, '0');
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -558,13 +610,61 @@ export class TableComponent {
       .replace('ss', seconds);
   }
 
-  /**
-   * Get text alignment style for a column
-   */
+  getBadgeClass(value: any): string {
+    if (value === null || value === undefined) return 'bg-gray-100 text-gray-700 border-round px-2.5 py-1 font-semibold text-xs';
+    
+    if (typeof value === 'boolean') {
+      return value 
+        ? 'bg-green-100 text-green-700 border-round px-2.5 py-1 font-semibold text-xs' 
+        : 'bg-orange-100 text-orange-700 border-round px-2.5 py-1 font-semibold text-xs';
+    }
+
+    const val = String(value).toUpperCase();
+    const base = 'border-round px-2.5 py-1 font-semibold text-xs inline-block ';
+    
+    if (val === 'ORIGINAL') return base + 'bg-gray-100 text-gray-600 border-1 border-gray-300';
+    if (val === 'AMENDMENT') return base + 'bg-blue-100 text-blue-700';
+    if (val.includes('NOT_FOUND') || val.includes('ERROR') || val.includes('FAILED') || val.includes('REJECTED') || val.includes('INACTIVE') || val.includes('ESCALATED')) {
+      return base + 'bg-red-100 text-red-700';
+    }
+    if (val === 'COMPLETED' || val === 'SUCCESS' || val === 'APPROVED' || val === 'ACTIVE') {
+      return base + 'bg-green-100 text-green-700';
+    }
+    if (val.includes('PENDING') || val === 'PROCESSING' || val === 'QUEUED' || val.includes('REVIEW')) {
+      return base + 'bg-orange-100 text-orange-700';
+    }
+    if (val.includes('PROGRESS')) {
+      return base + 'bg-blue-100 text-blue-700';
+    }
+    return base + 'bg-indigo-100 text-indigo-700';
+  }
+
   getAlignment(col: TableColumn, isHeader: boolean = false): string {
     if (isHeader) {
       return col.headerAlign || 'center';
     }
     return col.align || 'left';
+  }
+
+  ngOnDestroy() {
+    if (this._shortcutId) {
+      this.shortcuts.unregister(this._shortcutId);
+      this._shortcutId = null;
+    }
+
+    if (this._activeMenu) {
+      this._activeMenu.hide();
+      this._activeMenu = null;
+    }
+    
+    setTimeout(() => {
+      document.querySelectorAll('.p-menu-overlay, .p-menu, [data-pc-name="menu"]').forEach(el => {
+        try {
+          if (el && el.parentNode) {
+            el.parentNode.removeChild(el);
+          }
+        } catch (e) {}
+      });
+    }, 100);
   }
 }

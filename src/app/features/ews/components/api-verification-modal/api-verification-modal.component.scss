@@ -15,12 +15,12 @@
 
 /* Sidebar */
 .sidebar {
-  width: 240px;
+  width: 260px;
   border-right: 1px solid var(--surface-border);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  background: var(--surface-ground);
+  background: #ffffff;
   height: 100%;
 }
 
@@ -40,10 +40,10 @@
     width: 100%;
     padding: 0.5rem 0.5rem 0.5rem 2.25rem;
     border: 1px solid var(--surface-border);
-    border-radius: 4px;
-    font-size: 1rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
     color: var(--text-color);
-    background: var(--surface-card);
+    background: #ffffff;
   }
 }
 
@@ -64,30 +64,30 @@
   display: flex;
   align-items: center;
   padding: 0.75rem;
-  margin-bottom: 0.25rem;
-  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid var(--surface-border);
   cursor: pointer;
+  transition: all 0.15s ease;
   
   &:hover {
-    background: var(--surface-hover);
+    background: #f8fafc;
+    border-color: #cbd5e1;
   }
   
   &.active {
-    background: var(--highlight-bg);
-    color: var(--highlight-text-color);
+    background: #eff6ff;
+    border-color: #3b82f6;
+    color: #1d4ed8;
     
     .api-icon, .api-info .api-name, .api-info .api-cat {
-      color: var(--highlight-text-color);
+      color: #1d4ed8;
     }
   }
 
   &.integrated {
-    background: rgba(34, 197, 94, 0.08);
-    border-left: 3px solid #22c55e;
-    
-    &:hover {
-      background: rgba(34, 197, 94, 0.15);
-    }
+    border-left: 4px solid #22c55e;
   }
   
   .api-icon {

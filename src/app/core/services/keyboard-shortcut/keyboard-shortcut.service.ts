@@ -39,7 +39,7 @@ export class KeyboardShortcutService implements OnDestroy {
       this.handleKeydown(event);
     };
 
-    window.addEventListener('keydown', this.keydownListener);
+    window.addEventListener('keydown', this.keydownListener, true);
     this.isInitialized = true;
   }
 
@@ -261,7 +261,7 @@ export class KeyboardShortcutService implements OnDestroy {
    */
   ngOnDestroy(): void {
     if (this.keydownListener) {
-      window.removeEventListener('keydown', this.keydownListener);
+      window.removeEventListener('keydown', this.keydownListener, true);
       this.keydownListener = null;
     }
     this.registrations.clear();

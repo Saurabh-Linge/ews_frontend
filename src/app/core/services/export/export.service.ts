@@ -7,7 +7,7 @@ import * as XLSX from 'xlsx';
 export class ExportService {
 
   /**
-   * Export data to Excel (.xlsx) using the xlsx library
+   * Export data to Excel (.xlsx) using HTML table parsing to guarantee bold headers & column titles
    * @param data Array of objects to export. Supports _rowType for styling/merging.
    * @param columns Array of column definitions { field: string, header: string }
    * @param fileName Name of the file (without extension)
@@ -26,117 +26,65 @@ export class ExportService {
       return;
     }
 
-    const worksheetData: any[][] = [];
-    const merges: XLSX.Range[] = [];
-    let currentRowIndex = 0;
+    const tempDiv = document.createElement('div');
+    const colCount = columns.length;
+    let html = '<table>';
 
-    // 1. Add Report Headers (Merged rows on top)
-    reportHeaders.forEach((headerText) => {
-      const headerRow = new Array(columns.length).fill('');
-      headerRow[0] = headerText;
-      worksheetData.push(headerRow);
-
-      merges.push({
-        s: { r: currentRowIndex, c: 0 },
-        e: { r: currentRowIndex, c: columns.length - 1 }
-      });
-      currentRowIndex++;
+    // 1. Add Top Report Headers (Bold <b> merged rows)
+    reportHeaders.forEach((hText) => {
+      html += `<tr><td colspan="${colCount}" style="font-weight: bold; font-size: 11pt;"><b>${this.escapeHtml(hText)}</b></td></tr>`;
     });
 
-    // 2. Add Column Headers
-    let columnHeaderRowIndexes: number[] = [];
-
-    if (columnHeader?.rows?.length) {
-      const headerStartRowIndex = currentRowIndex;
-
-      columnHeader.rows.forEach((row) => {
-        worksheetData.push(row);
-        columnHeaderRowIndexes.push(currentRowIndex);
-        currentRowIndex++;
-      });
-
-      (columnHeader.merges || []).forEach((merge) => {
-        merges.push({
-          s: {
-            r: headerStartRowIndex + merge.s.r,
-            c: merge.s.c,
-          },
-          e: {
-            r: headerStartRowIndex + merge.e.r,
-            c: merge.e.c,
-          },
-        });
-      });
-    } else {
-      worksheetData.push(columns.map(col => col.header));
-      columnHeaderRowIndexes.push(currentRowIndex);
-      currentRowIndex++;
+    // 2. Add 1 Line Blank Gap above table if report headers exist
+    if (reportHeaders.length > 0) {
+      html += `<tr><td colspan="${colCount}"></td></tr>`;
     }
 
-    // 3. Add Data Rows (with special handling for group headers)
+    // 3. Add Table Column Headers (Bold <b> <th> headers)
+    html += '<thead><tr style="background-color: #f1f5f9;">';
+    columns.forEach((col) => {
+      html += `<th style="font-weight: bold; font-size: 11pt; text-align: left;"><b>${this.escapeHtml(col.header)}</b></th>`;
+    });
+    html += '</tr></thead>';
+
+    // 4. Add Data Rows
+    html += '<tbody>';
     data.forEach((row) => {
       if (row._rowType === 'header') {
-        const groupHeaderRow = new Array(columns.length).fill('');
-        groupHeaderRow[0] = row._headerValue || '';
-        worksheetData.push(groupHeaderRow);
-
-        merges.push({
-          s: { r: currentRowIndex, c: 0 },
-          e: { r: currentRowIndex, c: columns.length - 1 }
-        });
+        html += `<tr><td colspan="${colCount}" style="font-weight: bold; background-color: #e2e8f0;"><b>${this.escapeHtml(row._headerValue || '')}</b></td></tr>`;
       } else {
-        worksheetData.push(columns.map(col => row[col.field]));
-      }
-      currentRowIndex++;
-    });
-
-    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
-
-    // Apply Merges
-    if (merges.length > 0) {
-      worksheet['!merges'] = merges;
-    }
-
-    columnHeaderRowIndexes.forEach((rowIndex) => {
-      for (let colIndex = 0; colIndex < columns.length; colIndex++) {
-        const cellRef = XLSX.utils.encode_cell({ r: rowIndex, c: colIndex });
-        const cell = worksheet[cellRef];
-
-        if (!cell) {
-          continue;
-        }
-
-        cell.s = {
-          ...(cell.s || {}),
-          font: {
-            ...(cell.s?.font || {}),
-            bold: true,
-          },
-          alignment: {
-            ...(cell.s?.alignment || {}),
-            horizontal: 'center',
-            vertical: 'center',
-            wrapText: true,
-          },
-        };
+        html += '<tr>';
+        columns.forEach((col) => {
+          const val = row[col.field] ?? '';
+          html += `<td>${this.escapeHtml(String(val))}</td>`;
+        });
+        html += '</tr>';
       }
     });
+    html += '</tbody></table>';
 
-    // Basic styling/formatting hints for xlsx library (AOA to Sheet doesn't do much style, but we can set widths)
+    tempDiv.innerHTML = html;
+    const tableEl = tempDiv.querySelector('table')!;
+    const worksheet = XLSX.utils.table_to_sheet(tableEl, { raw: true });
+
+    // Set Column Widths to prevent text clipping
     const colWidths = columns.map((c) => ({
-      wch: (c as any).excelWidth || Math.min(Math.max(c.header.length, 12), 22),
+      wch: (c as any).excelWidth || Math.max((c.header || '').length + 6, 18),
     }));
     worksheet['!cols'] = colWidths;
 
-    // Center alignment for report headers (this is tricky with utilities, but we can try)
-    // For now, AOAs are best for layout as requested.
-
-    // Create Workbook
+    // Create Workbook & Download
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Report');
-
-    // Generate and download file
     XLSX.writeFile(workbook, `${fileName}_${new Date().toLocaleDateString('en-GB').replace(/\//g, '-')}.xlsx`);
+  }
+
+  private escapeHtml(str: string): string {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   /**

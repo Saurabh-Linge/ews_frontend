@@ -25,9 +25,9 @@ import { TableComponent, TableColumn, TableAction } from '../../../../shared/com
   template: `
     <p-toast></p-toast>
     
-    <div class="card">
-      <div class="flex align-items-center justify-content-between mb-4">
-        <h5 class="m-0 text-xl font-semibold" style="color: var(--text-color, #102a43); font-weight: 700;">Branch and Department Master</h5>
+    <div class="card p-4">
+      <div class="flex align-items-center justify-content-between mb-4 pb-3 border-bottom-1 surface-border">
+        <h5 class="m-0 text-xl font-bold" style="color: var(--text-color, #102a43); font-weight: 700;">Branch and Department Master</h5>
       </div>
 
       <app-table

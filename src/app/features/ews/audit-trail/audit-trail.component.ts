@@ -74,6 +74,7 @@ export class AuditTrailComponent implements OnInit {
   private msg = inject(MessageService);
   
   loading = signal(true);
+  branchesMap = new Map<string, string>();
 
   trail = signal<any[]>([
     { logged_at: '2026-06-04 10:32', account_id: '178', borrower_name: 'Suresh Patil', branch: 'Ajara', action: 'Added to watch list', performed_by: 'Auditor (auto)', remarks: 'Q14 answer triggered signal' },
@@ -111,11 +112,19 @@ export class AuditTrailComponent implements OnInit {
   ngOnInit() {
     this.ewsApi.getBranches().subscribe({
       next: (data) => {
-        const opts = [{ label: 'All Branches', value: null }, ...data.map(b => ({ label: b.name, value: b.name }))];
+        const opts = [{ label: 'All Branches', value: null }, ...(data || []).map(b => ({ label: `${b.name} (${b.code || b.id})`, value: b.name }))];
         this.branchOptions.set(opts);
-      }
+
+        (data || []).forEach(b => {
+          if (b.code) this.branchesMap.set(String(b.code), b.name);
+          if (b.id) this.branchesMap.set(String(b.id), b.name);
+          if (b.name) this.branchesMap.set(b.name, b.name);
+        });
+
+        this.loadData();
+      },
+      error: () => this.loadData()
     });
-    this.loadData();
   }
 
   onBranchChange(val: string | null) {
@@ -136,7 +145,8 @@ export class AuditTrailComponent implements OnInit {
         if (d && d.length) {
           const formatted = d.map(item => ({
             ...item,
-            logged_at: item.logged_at || item.dt,
+            branch: this.branchesMap.get(String(item.branch)) || this.branchesMap.get(String(item.branch_code)) || item.branch || '—',
+            logged_at: item.logged_at || item.dt || item.created_at,
             performed_by: item.performed_by || item.by
           }));
           this.trail.set(formatted);

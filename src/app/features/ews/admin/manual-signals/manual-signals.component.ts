@@ -2,11 +2,11 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
+import { SelectModule } from 'primeng/select';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { EwsApiService } from '../../services/ews-api.service';
 import { TableComponent, TableColumn, TableAction } from '../../../../shared/components/table/table.component';
-import { SelectFieldComponent } from '../../../../shared/components/form/select-field/select-field.component';
 
 @Component({
   selector: 'app-manual-signals',
@@ -15,18 +15,33 @@ import { SelectFieldComponent } from '../../../../shared/components/form/select-
     CommonModule, 
     FormsModule, 
     ButtonModule, 
+    SelectModule,
     ToastModule,
-    TableComponent,
-    SelectFieldComponent,
+    TableComponent
   ],
   providers: [MessageService],
   template: `
     <p-toast />
 
     <div class="card p-4">
-      <div class="flex align-items-center justify-content-between mb-4">
-        <h5 class="m-0 text-xl font-semibold" style="color: var(--text-color, #102a43); font-weight: 700;">Manual EWS Risk Signals</h5>
-        <div style="display: flex; gap: 0.5rem;">
+      <div class="flex flex-column sm:flex-row align-items-start sm:align-items-center justify-content-between gap-3 mb-4 pb-3 border-bottom-1 surface-border">
+        <div>
+          <h5 class="m-0 text-xl font-bold" style="color: var(--text-color, #102a43); font-weight: 700;">Manual EWS Risk Signals</h5>
+          <p class="m-0 mt-1 text-sm text-gray-500">Configure operational and conduct risk indicators monitored manually by Risk Officers.</p>
+        </div>
+        <div class="flex align-items-center gap-2">
+          <div style="width: 200px;">
+            <p-select 
+              [ngModel]="filterCat()" 
+              (ngModelChange)="filterCat.set($event)" 
+              [options]="categories" 
+              optionLabel="label" 
+              optionValue="value" 
+              placeholder="All Categories" 
+              appendTo="body" 
+              styleClass="w-full p-inputtext-sm">
+            </p-select>
+          </div>
           <p-button label="Enable All" severity="success" (onClick)="toggleAll(true)" />
           <p-button label="Disable All" [outlined]="true" severity="secondary" (onClick)="toggleAll(false)" />
         </div>
@@ -37,24 +52,12 @@ import { SelectFieldComponent } from '../../../../shared/components/form/select-
         [columns]="tableColumns"
         [loading]="loading()"
         [actions]="tableActions"
+        [showAddButton]="false"
         [showRefreshButton]="true"
         [paginator]="true"
         [rows]="20"
         (onRefresh)="loadData()"
-      >
-        <div toolbar-actions class="flex align-items-center gap-3">
-          <div style="width: 220px;">
-            <app-select-field
-              [field]="filterCat"
-              [options]="categories"
-              optionLabel="label"
-              optionValue="value"
-              placeholder="All Categories"
-              [hideLabel]="true"
-            ></app-select-field>
-          </div>
-        </div>
-      </app-table>
+      ></app-table>
     </div>
   `,
 })
@@ -87,8 +90,8 @@ export class ManualSignalsComponent implements OnInit {
 
   tableActions: TableAction[] = [
     {
-      label: (row: any) => row.enabled ? 'Disable' : 'Enable',
-      icon: (row: any) => row.enabled ? 'pi pi-times-circle' : 'pi pi-check-circle',
+      label: (row: any) => row?.enabled ? 'Disable' : 'Enable',
+      icon: (row: any) => row?.enabled ? 'pi pi-times-circle' : 'pi pi-check-circle',
       command: (row: any) => this.toggle(row)
     }
   ];

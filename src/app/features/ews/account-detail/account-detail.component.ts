@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ToastModule } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { DialogModule } from 'primeng/dialog';
+import { DrawerModule } from 'primeng/drawer';
 import { ButtonModule } from 'primeng/button';
 import { PanelModule } from 'primeng/panel';
 import { DividerModule } from 'primeng/divider';
@@ -24,7 +25,7 @@ import { HeroComponent } from '../../../shared/components/ui/hero/hero';
   selector: 'app-account-detail',
   standalone: true,
   imports: [CommonModule, FormsModule, ToastModule,
-    DialogModule, ButtonModule, PanelModule, DividerModule,
+    DialogModule, DrawerModule, ButtonModule, PanelModule, DividerModule,
     MessageModule, SelectModule, InputNumberModule, DatePickerModule, InputTextModule,
     ApiVerificationModalComponent,HeroComponent],
   providers: [MessageService],
@@ -92,8 +93,28 @@ export class AccountDetailComponent implements OnInit {
     { label: 'Risk: Low', value: 'Low' },
   ];
 
+  cbsSearchText = '';
+
   formatKey(key: any): string {
     return String(key).replace(/_/g, ' ');
+  }
+
+  isLongValue(key: any, val: any): boolean {
+    const k = String(key).toLowerCase();
+    const v = String(val ?? '');
+    return k.includes('address') || k.includes('remark') || k.includes('description') || k.includes('note') || v.length > 35;
+  }
+
+  getCbsEntries(): { key: string; value: any }[] {
+    const dump = this.account()?.dump_data;
+    if (!dump) return [];
+    const entries = Object.keys(dump).map(key => ({ key, value: dump[key] }));
+    if (!this.cbsSearchText.trim()) return entries;
+    const query = this.cbsSearchText.toLowerCase();
+    return entries.filter(e => 
+      this.formatKey(e.key).toLowerCase().includes(query) || 
+      String(e.value ?? '').toLowerCase().includes(query)
+    );
   }
 
   isViewable(filename: string): boolean {
