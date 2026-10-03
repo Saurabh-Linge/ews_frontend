@@ -270,7 +270,8 @@
 }
 
 <!-- RO / BRANCH DASHBOARD VIEW -->
-@if (!ewsState.isRole('admin') && !ewsState.isRole('cro')) {
+<!-- RO DASHBOARD VIEW -->
+@if (ewsState.isRole('ro') || (!ewsState.isRole('admin') && !ewsState.isRole('cro') && !ewsState.isRole('branch'))) {
   <app-hero
     tag="RISK MONITORING"
     title="Risk Officer Dashboard"
@@ -398,6 +399,153 @@
             <div style="flex: 1; min-width: 0;">
               <span class="font-semibold text-gray-900 block" style="font-size: 0.9rem; line-height: 1.4; color: var(--text-color);">Master Directions on Early Warning Signals in Commercial & Co-op Banks</span>
               <span class="text-xs text-gray-500 block mt-1">Reserve Bank of India (RBI) &middot; Portfolio Risk Audit</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+
+<!-- BRANCH DASHBOARD VIEW -->
+@if (ewsState.isRole('branch')) {
+  <app-hero
+    tag="BRANCH OPERATIONS"
+    title="Branch Manager Dashboard"
+    subtitle="Review branch watchlist accounts, submit investigation responses, and track risk alerts."
+    roleBadge="Branch Manager"
+    roleIcon="pi pi-building"
+  ></app-hero>
+
+  <div class="metrics-grid">
+    <div class="metric-card theme-blue" (click)="goWatchList()">
+      <div class="card-glow"></div>
+      <div class="card-icon"><i class="pi pi-building"></i></div>
+      <div class="card-details">
+        <span class="card-title">Branch Accounts</span>
+        <span class="card-value">{{ stats()?.total_portfolio_accounts || 0 }}</span>
+      </div>
+    </div>
+
+    <div class="metric-card theme-red" (click)="goWatchList({ risk: 'High' })">
+      <div class="card-glow"></div>
+      <div class="card-icon"><i class="pi pi-exclamation-triangle"></i></div>
+      <div class="card-details">
+        <span class="card-title">High Risk Flagged</span>
+        <span class="card-value">{{ stats()?.high_risk || 0 }}</span>
+      </div>
+    </div>
+
+    <div class="metric-card theme-amber" (click)="goInvestigations()">
+      <div class="card-glow"></div>
+      <div class="card-icon"><i class="pi pi-clock"></i></div>
+      <div class="card-details">
+        <span class="card-title">Pending Response</span>
+        <span class="card-value">{{ stats()?.under_investigation || 0 }}</span>
+      </div>
+    </div>
+
+    <div class="metric-card theme-purple" (click)="goWatchList()">
+      <div class="card-glow"></div>
+      <div class="card-icon"><i class="pi pi-search"></i></div>
+      <div class="card-details">
+        <span class="card-title">Active Watchlist</span>
+        <span class="card-value">{{ stats()?.total_active || 0 }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="dashboard-grid-2col">
+    <!-- Branch Action Queue -->
+    <div class="dashboard-panel table-panel">
+      <div class="panel-header">
+        <div>
+          <h3>Branch Action Queue</h3>
+          <span class="panel-subtitle">Accounts requiring branch manager review, explanation or response</span>
+        </div>
+        <a (click)="goWatchList()" class="text-primary hover:underline text-sm font-medium cursor-pointer">
+          My Watchlist →
+        </a>
+      </div>
+      <div class="panel-body">
+        <div style="max-height: 320px; overflow-y: auto; overflow-x: auto;">
+          <table class="dashboard-table w-full">
+            <thead style="position: sticky; top: 0; z-index: 1; background: var(--surface-card, #fff);">
+              <tr>
+                <th>Branch</th>
+                <th>Account ID</th>
+                <th>Borrower</th>
+                <th>Risk Level</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let br of branchStats()">
+                <td class="font-bold text-gray-900">{{ br.branch }}</td>
+                <td>AC-{{ br.branch_code || '101' }}</td>
+                <td>{{ br.branch }} Borrower</td>
+                <td>
+                  <span class="text-xs font-bold px-2 py-0.5 rounded"
+                    [ngClass]="{
+                      'text-red-700 bg-red-50': br.flagged > 0,
+                      'text-amber-700 bg-amber-50': br.under_investigation > 0,
+                      'text-green-700 bg-green-50': br.flagged === 0
+                    }">
+                    {{ br.flagged > 0 ? 'High Risk' : 'Normal' }}
+                  </span>
+                </td>
+                <td>
+                  <a (click)="goWatchList({ branch: br.branch })"
+                     class="text-indigo-600 hover:text-indigo-900 font-bold text-sm flex items-center gap-1 cursor-pointer">
+                    <i class="pi pi-chevron-right"></i> View
+                  </a>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Branch Responsibilities & Directives -->
+    <div class="dashboard-panel">
+      <div class="panel-header">
+        <div>
+          <h3>Branch Responsibilities & Directives</h3>
+          <span class="panel-subtitle">Key compliance tasks and early warning resolution</span>
+        </div>
+        <a routerLink="/ews/reports" class="text-primary hover:underline text-sm font-medium">View Reports →</a>
+      </div>
+      <div class="panel-body">
+        <div class="progress-list">
+          <div class="progress-item cursor-pointer" style="border-bottom: 1px solid var(--surface-border, #e2e8f0); padding-bottom: 0.75rem; margin-bottom: 0.75rem; display: flex; flex-direction: row; gap: 0.75rem;" (click)="goInvestigations()">
+            <div style="width: 2.25rem; height: 2.25rem; border-radius: 8px; background-color: #fef3c7; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <i class="pi pi-send" style="color: #d97706; font-size: 1.1rem;"></i>
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <span class="font-semibold text-gray-900 block" style="font-size: 0.9rem; line-height: 1.4; color: var(--text-color);">Submit Investigation Responses</span>
+              <span class="text-xs text-gray-500 block mt-1">Provide branch feedback & recovery progress on flagged accounts</span>
+            </div>
+          </div>
+
+          <div class="progress-item cursor-pointer" style="border-bottom: 1px solid var(--surface-border, #e2e8f0); padding-bottom: 0.75rem; margin-bottom: 0.75rem; display: flex; flex-direction: row; gap: 0.75rem;" (click)="goWatchList()">
+            <div style="width: 2.25rem; height: 2.25rem; border-radius: 8px; background-color: #dbeafe; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <i class="pi pi-eye" style="color: #2563eb; font-size: 1.1rem;"></i>
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <span class="font-semibold text-gray-900 block" style="font-size: 0.9rem; line-height: 1.4; color: var(--text-color);">Monitor Branch Watchlist</span>
+              <span class="text-xs text-gray-500 block mt-1">Check critical signals, high risk accounts & repayment regularity</span>
+            </div>
+          </div>
+
+          <div class="progress-item cursor-pointer" style="border-bottom: 1px solid var(--surface-border, #e2e8f0); padding-bottom: 0.75rem; margin-bottom: 0.75rem; display: flex; flex-direction: row; gap: 0.75rem;" routerLink="/ews/resolved">
+            <div style="width: 2.25rem; height: 2.25rem; border-radius: 8px; background-color: #d1fae5; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <i class="pi pi-check-circle" style="color: #059669; font-size: 1.1rem;"></i>
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <span class="font-semibold text-gray-900 block" style="font-size: 0.9rem; line-height: 1.4; color: var(--text-color);">Resolved Accounts History</span>
+              <span class="text-xs text-gray-500 block mt-1">Review cleared signals and past remediated branch accounts</span>
             </div>
           </div>
         </div>

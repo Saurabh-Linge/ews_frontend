@@ -46,9 +46,11 @@ export class AppMenu implements OnInit {
     if (['cro', 'ro', 'admin'].includes(role)) {
       overviewItems.push({ label: 'All Accounts', icon: 'pi pi-fw pi-folder-open', routerLink: ['/ews/all-accounts'] });
     }
-    if (role !== 'branch') {
-      overviewItems.push({ label: 'Watch List', icon: 'pi pi-fw pi-exclamation-triangle', routerLink: ['/ews/watch-list'] });
-    }
+    overviewItems.push({ 
+      label: role === 'branch' ? 'My Branch Watchlist' : 'Watch List', 
+      icon: 'pi pi-fw pi-exclamation-triangle', 
+      routerLink: ['/ews/watch-list'] 
+    });
 
     if (overviewItems.length > 0) {
       menu.push({ label: 'OVERVIEW', items: overviewItems });

@@ -30,16 +30,16 @@ export class LoginComponent {
   selectedLanguage = 'en';
 
   demoUsers = [
-    { label: 'CRO', icon: 'pi pi-shield', username: 'cro', password: 'password123' },
-    { label: 'RO', icon: 'pi pi-user', username: 'ro', password: 'password123' },
-    { label: 'Branch', icon: 'pi pi-building', username: 'branch', password: 'password123' }
+    { label: 'CRO', icon: 'pi pi-shield', username: 'cro_user', password: 'cro123' },
+    { label: 'RO', icon: 'pi pi-user', username: 'ro_user1', password: 'ro123' },
+    { label: 'Branch', icon: 'pi pi-building', username: 'bm_head_office', password: 'branch123' }
   ];
 
   @HostListener('document:keydown', ['$event'])
   handleKeyboardEvent(event: KeyboardEvent) {
     if (event.ctrlKey && event.key.toLowerCase() === 'k') {
       event.preventDefault();
-      this.quickLogin('admin', 'password123');
+      this.quickLogin('admin', 'admin123');
     }
   }
 
