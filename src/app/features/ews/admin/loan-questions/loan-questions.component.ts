@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -36,35 +36,54 @@ export class LoanQuestionsComponent implements OnInit {
   private config = inject(APP_CONFIG) as any;
   private msg = inject(MessageService);
   
-  questions = signal<any[]>([]);
+  allQuestions = signal<any[]>([]);
+  categoryFilter = signal<'All' | 'Retail' | 'Commercial'>('All');
   showDrawer = signal(false);
   isEdit = false;
   loadingTable = false;
   saving = false;
+
+  categories = ['Retail', 'Commercial'];
+  
+  retailCount = computed(() => this.allQuestions().filter(q => q.category === 'Retail').length);
+  commercialCount = computed(() => this.allQuestions().filter(q => q.category === 'Commercial').length);
+
+  questions = computed(() => {
+    const filter = this.categoryFilter();
+    if (filter === 'All') return this.allQuestions();
+    return this.allQuestions().filter(q => q.category === filter);
+  });
   
   form: any = {
     question_desc: '',
+    category: 'Commercial',
     type: 'text',
     options: [],
     reference_name: '',
-    loan_products: []
+    loan_products: [],
+    is_active: true
   };
 
   types = ['numeric', 'text', 'list', 'yes/no', 'date'];
   loanProductsOptions = signal<any[]>([]);
 
   tableColumns: TableColumn[] = [
-    { field: 'id', header: 'ID', width: '80px', sortable: true },
+    { field: 'id', header: 'ID', width: '70px', sortable: true },
+    { field: 'category', header: 'CATEGORY', width: '130px', sortable: true, type: 'status' },
     { field: 'question_desc', header: 'QUESTION DESC', sortable: true },
-    { field: 'type', header: 'TYPE', sortable: true, type: 'status' },
-    { field: 'reference_name', header: 'REF NAME', sortable: true },
-    { field: 'is_active', header: 'STATUS', sortable: true, type: 'boolean' }
+    { field: 'type', header: 'TYPE', width: '100px', sortable: true, type: 'status' },
+    { field: 'reference_name', header: 'REF NAME', width: '120px', sortable: true },
+    { field: 'is_active', header: 'STATUS', width: '90px', sortable: true, type: 'boolean' }
   ];
 
   tableActions: TableAction[] = [
     { label: 'Edit', icon: 'pi pi-pencil', command: (row) => this.edit(row) },
     { label: 'Delete', icon: 'pi pi-trash', command: (row) => this.delete(row.id) }
   ];
+
+  setFilter(cat: 'All' | 'Retail' | 'Commercial') {
+    this.categoryFilter.set(cat);
+  }
 
   updateOptions(text: string) {
     if (!text) {
@@ -95,10 +114,10 @@ export class LoanQuestionsComponent implements OnInit {
     this.loadingTable = true;
     this.http.get<any[]>(`${this.config.apiUrl}/api/ews/loan-questions`).subscribe({
       next: (res) => {
-        this.questions.set(res);
+        this.allQuestions.set(res);
         this.loadingTable = false;
       },
-      error: (err) => {
+      error: () => {
         this.msg.add({ severity: 'error', summary: 'Error', detail: 'Could not load questions' });
         this.loadingTable = false;
       }
@@ -106,13 +125,22 @@ export class LoanQuestionsComponent implements OnInit {
   }
 
   openNew() {
-    this.form = { question_desc: '', type: 'text', options: [], reference_name: '', loan_products: [], is_active: true };
+    this.form = { 
+      question_desc: '', 
+      category: this.categoryFilter() !== 'All' ? this.categoryFilter() : 'Commercial',
+      type: 'text', 
+      options: [], 
+      reference_name: '', 
+      loan_products: [], 
+      is_active: true 
+    };
     this.isEdit = false;
     this.showDrawer.set(true);
   }
 
   edit(item: any) {
     this.form = { ...item };
+    if (!this.form.category) this.form.category = 'Commercial';
     if (!this.form.options) this.form.options = [];
     if (!this.form.loan_products) this.form.loan_products = [];
     if (this.form.is_active === undefined) this.form.is_active = true;

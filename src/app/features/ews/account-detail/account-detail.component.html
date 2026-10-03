@@ -85,21 +85,39 @@
         </div>
       </div>
 
-      <!-- 💎 2. Full CBS Account Dump (Uniform Aligned Pure White Field Boxes with 14px Padding) -->
+      <!-- 💎 2. Full CBS Account Dump with Clean Signal Highlight -->
       <div class="card p-4" *ngIf="account()?.dump_data">
-        <div class="flex flex-column sm:flex-row align-items-start sm:align-items-center justify-content-between gap-3 cursor-pointer" (click)="showDump = !showDump">
-          <div class="flex align-items-center gap-2">
-            <div class="w-2.5rem h-2.5rem border-round-lg flex align-items-center justify-content-center bg-blue-50 text-blue-600 border-1 border-blue-200">
+        <div class="flex flex-column md:flex-row align-items-start md:align-items-center justify-content-between gap-3 cursor-pointer" (click)="showDump = !showDump">
+          <div class="flex align-items-center gap-3">
+            <div class="w-2.5rem h-2.5rem border-round-lg flex align-items-center justify-content-center bg-blue-50 text-blue-600 border-1 border-blue-200 flex-shrink-0">
               <i class="pi pi-database text-lg text-blue-600"></i>
             </div>
             <div>
-              <h5 class="m-0 text-lg font-bold text-900">Full CBS Account Dump</h5>
-              <div class="text-xs text-500 mt-0.5">{{ getCbsEntries().length }} Fields Available</div>
+              <div class="flex align-items-center gap-2 flex-wrap">
+                <h5 class="m-0 text-lg font-bold text-900 white-space-nowrap">Full CBS Account Dump</h5>
+                <span *ngIf="getFlaggedFieldsCount() > 0" class="px-2 py-0.5 border-round text-xs font-bold bg-red-100 text-red-700 border-1 border-red-300 white-space-nowrap">
+                  <i class="pi pi-bolt mr-1 text-red-600"></i>{{ getFlaggedFieldsCount() }} Trigger Fields
+                </span>
+              </div>
+              <div class="text-xs text-500 mt-0.5">{{ getCbsEntries().length }} Fields Available &middot; Flagged fields triggered active EWS signals</div>
             </div>
           </div>
 
-          <div class="flex align-items-center gap-2 w-full sm:w-auto justify-content-between sm:justify-end" (click)="$event.stopPropagation()">
-            <div *ngIf="showDump" class="search-input-wrapper" style="width: 200px; position: relative;">
+          <div class="flex align-items-center gap-2 w-full md:w-auto justify-content-between md:justify-end" (click)="$event.stopPropagation()">
+            <!-- Toggle Flagged Only -->
+            <button 
+              *ngIf="showDump && getFlaggedFieldsCount() > 0"
+              pButton 
+              type="button" 
+              [label]="showOnlyFlaggedFields ? 'Show All' : 'Flagged Only (' + getFlaggedFieldsCount() + ')'" 
+              icon="pi pi-bolt" 
+              class="p-button-sm py-1 px-3 text-xs white-space-nowrap" 
+              [ngClass]="showOnlyFlaggedFields ? 'p-button-secondary' : 'p-button-danger p-button-outlined'" 
+              (click)="showOnlyFlaggedFields = !showOnlyFlaggedFields">
+            </button>
+
+            <!-- Search Filter -->
+            <div *ngIf="showDump" class="search-input-wrapper" style="width: 170px; position: relative;">
               <i class="pi pi-search search-input-icon" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: #94a3b8;"></i>
               <input 
                 pInputText 
@@ -113,14 +131,44 @@
           </div>
         </div>
 
-        <div *ngIf="showDump" class="grid formgrid m-0 mt-3 pt-3 border-top-1 surface-border" style="max-height: 400px; overflow-y: auto; padding-right: 4px;">
+        <div *ngIf="showDump" class="grid formgrid m-0 mt-3 pt-3 border-top-1 surface-border" style="max-height: 440px; overflow-y: auto; padding-right: 4px;">
           <div 
             *ngFor="let item of getCbsEntries()" 
             [ngClass]="isLongValue(item.key, item.value) ? 'col-12 mb-2' : 'col-12 sm:col-6 md:col-3 mb-2'" 
             class="flex flex-column">
-            <div class="bg-white border-round-lg border-1 surface-border w-full flex flex-column justify-content-center" style="padding: 10px 14px !important; min-height: 54px; background-color: #ffffff !important;">
-              <div class="text-xs font-bold uppercase tracking-wide" style="font-size: 10px; margin-bottom: 3px; color: #64748b;">{{ formatKey(item.key) }}</div>
-              <div class="text-xs font-semibold word-break-break-all" style="font-size: 12px; line-height: 1.35; color: #0f172a;">
+            
+            <div 
+              class="border-round-lg border-1 w-full flex flex-column justify-content-center transition-all"
+              [style.background-color]="item.isFlagged ? '#fef2f2' : '#ffffff'"
+              [style.border-color]="item.isFlagged ? '#ef4444' : 'var(--surface-border, #e2e8f0)'"
+              [style.border-width]="item.isFlagged ? '1.5px' : '1px'"
+              [style.box-shadow]="item.isFlagged ? '0 2px 6px rgba(239, 68, 68, 0.12)' : 'none'"
+              [title]="item.isFlagged ? getFieldFlagReason(item.key) : ''"
+              style="padding: 8px 12px !important; min-height: 54px; position: relative;">
+              
+              <!-- Header: Label + Tiny Trigger Indicator -->
+              <div class="flex align-items-center justify-content-between mb-1" style="gap: 4px; line-height: 1.1;">
+                <span 
+                  class="text-xs font-bold uppercase tracking-wide text-truncate" 
+                  [style.color]="item.isFlagged ? '#dc2626' : '#64748b'" 
+                  style="font-size: 10px;">
+                  {{ formatKey(item.key) }}
+                </span>
+                
+                <span 
+                  *ngIf="item.isFlagged" 
+                  class="flex-shrink-0 flex align-items-center gap-1 font-bold"
+                  style="color: #dc2626; font-size: 9px;">
+                  <i class="pi pi-bolt" style="font-size: 9px;"></i> Trigger
+                </span>
+              </div>
+              
+              <!-- Value -->
+              <div 
+                class="text-xs word-break-break-all" 
+                [style.color]="item.isFlagged ? '#991b1b' : '#0f172a'"
+                [style.font-weight]="item.isFlagged ? '700' : '600'"
+                style="font-size: 12px; line-height: 1.35;">
                 <ng-container *ngIf="item.value !== null && item.value !== ''; else emptyVal">
                   {{ item.value }}
                 </ng-container>
@@ -362,9 +410,16 @@
           <div class="w-3rem h-3rem border-round-xl flex align-items-center justify-content-center shadow-1 flex-shrink-0" style="background-color: #6366f1; color: #ffffff !important;">
             <i class="pi pi-list-check" style="font-size: 1.5rem; color: #ffffff !important;"></i>
           </div>
-          <div>
+          <div class="flex-1">
             <h5 class="m-0 text-lg font-bold text-900">RO Pre-Assessment</h5>
-            <div class="text-xs text-600 mt-1">{{ answeredQuestionsCount }} / {{ accountQuestions().length }} answered</div>
+            <div class="flex flex-wrap gap-2 mt-2">
+              <span class="text-xs px-2 py-0.5 border-round font-semibold" style="background: rgba(13,148,136,0.12); color: #0d9488; border: 1px solid rgba(13,148,136,0.25);">
+                🏠 Retail: {{ answeredRetailCount }} / {{ retailQuestions().length }}
+              </span>
+              <span class="text-xs px-2 py-0.5 border-round font-semibold" style="background: rgba(79,70,229,0.12); color: #4f46e5; border: 1px solid rgba(79,70,229,0.25);">
+                🏢 Commercial: {{ answeredCommercialCount }} / {{ commercialQuestions().length }}
+              </span>
+            </div>
           </div>
         </div>
         <button pButton pRipple label="Open Assessment" icon="pi pi-pencil" class="p-button-outlined p-button-indigo w-full" (click)="showAssessmentDialog = true"></button>
@@ -494,12 +549,51 @@
     (visibleChange)="$event ? null : showAssessmentDialog = false">
 
     <ng-template pTemplate="header">
-      <div class="flex align-items-center gap-2">
-        <i class="pi pi-list-check text-indigo-500 text-xl"></i>
-        <span class="font-bold text-lg text-900">RO Pre-Assessment Questionnaire</span>
-        <span class="text-xs font-semibold px-2.5 py-1 border-round bg-indigo-50 text-indigo-700 border-1 border-indigo-200 ml-2">
-          {{ answeredQuestionsCount }} / {{ accountQuestions().length }} Answered
-        </span>
+      <div class="flex flex-column gap-2 w-full">
+        <div class="flex align-items-center justify-content-between">
+          <div class="flex align-items-center gap-2">
+            <i class="pi pi-list-check text-indigo-500 text-xl"></i>
+            <span class="font-bold text-lg text-900">RO Pre-Assessment Questionnaire</span>
+          </div>
+          <span class="text-xs font-semibold px-2.5 py-1 border-round bg-indigo-50 text-indigo-700 border-1 border-indigo-200">
+            Total: {{ answeredQuestionsCount }} / {{ accountQuestions().length }} Answered
+          </span>
+        </div>
+
+        <!-- Segregation Tabs: Retail vs Commercial -->
+        <div class="flex align-items-center p-1 border-round-xl gap-1" style="background: var(--surface-100, #f1f5f9); border: 1px solid var(--surface-300, #cbd5e1); width: 100%;">
+          <button 
+            type="button" 
+            (click)="selectedQuestionCategory.set('Retail')"
+            [style.background]="selectedQuestionCategory() === 'Retail' ? 'var(--surface-0, #ffffff)' : 'transparent'"
+            [style.color]="selectedQuestionCategory() === 'Retail' ? '#0d9488' : 'var(--text-color-secondary, #64748b)'"
+            [style.font-weight]="selectedQuestionCategory() === 'Retail' ? '700' : '500'"
+            class="border-none py-2 px-3 border-round-lg text-sm transition-all cursor-pointer flex-1 flex align-items-center justify-content-center gap-2">
+            <i class="pi pi-user"></i>
+            <span>Retail Questionnaire</span>
+            <span class="text-xs px-2 py-0.5 border-round-md"
+                  [style.background]="selectedQuestionCategory() === 'Retail' ? 'rgba(13,148,136,0.15)' : 'rgba(100,116,139,0.1)'"
+                  [style.color]="selectedQuestionCategory() === 'Retail' ? '#0d9488' : 'inherit'">
+              {{ answeredRetailCount }} / {{ retailQuestions().length }}
+            </span>
+          </button>
+
+          <button 
+            type="button" 
+            (click)="selectedQuestionCategory.set('Commercial')"
+            [style.background]="selectedQuestionCategory() === 'Commercial' ? 'var(--surface-0, #ffffff)' : 'transparent'"
+            [style.color]="selectedQuestionCategory() === 'Commercial' ? '#4f46e5' : 'var(--text-color-secondary, #64748b)'"
+            [style.font-weight]="selectedQuestionCategory() === 'Commercial' ? '700' : '500'"
+            class="border-none py-2 px-3 border-round-lg text-sm transition-all cursor-pointer flex-1 flex align-items-center justify-content-center gap-2">
+            <i class="pi pi-building"></i>
+            <span>Commercial Questionnaire</span>
+            <span class="text-xs px-2 py-0.5 border-round-md"
+                  [style.background]="selectedQuestionCategory() === 'Commercial' ? 'rgba(79,70,229,0.15)' : 'rgba(100,116,139,0.1)'"
+                  [style.color]="selectedQuestionCategory() === 'Commercial' ? '#4f46e5' : 'inherit'">
+              {{ answeredCommercialCount }} / {{ commercialQuestions().length }}
+            </span>
+          </button>
+        </div>
       </div>
     </ng-template>
 
@@ -524,12 +618,26 @@
         Fill in all fields below. Answers are used by the Rule Engine for risk evaluation.
       </p>
 
-      @for (q of accountQuestions(); track q.id; let i = $index) {
+      @if (displayedQuestions().length === 0) {
+        <div class="text-center p-5 surface-card border-round-xl border-1 surface-border">
+          <i class="pi pi-info-circle text-gray-400 text-3xl mb-2"></i>
+          <p class="text-600 m-0">No {{ selectedQuestionCategory() }} questions applicable for this account.</p>
+        </div>
+      }
+
+      @for (q of displayedQuestions(); track q.id; let i = $index) {
         <div class="surface-card p-3 border-round-xl border-1 surface-border mb-2">
-          <label class="block font-bold text-sm text-900 mb-2">
-            {{ i + 1 }}. {{ q.question_desc }}
-            <small class="text-400 font-normal ml-2 font-monospace">{{ q.reference_name }}</small>
-          </label>
+          <div class="flex align-items-center justify-content-between mb-2">
+            <label class="font-bold text-sm text-900 m-0">
+              {{ i + 1 }}. {{ q.question_desc }}
+            </label>
+            <span class="text-xs px-2 py-0.5 border-round font-semibold flex-shrink-0 ml-2"
+                  [style.background]="q.category === 'Retail' ? 'rgba(13,148,136,0.1)' : 'rgba(79,70,229,0.1)'"
+                  [style.color]="q.category === 'Retail' ? '#0d9488' : '#4f46e5'">
+              {{ q.category || 'Commercial' }}
+            </span>
+          </div>
+          <small class="text-400 font-normal block mb-2 font-monospace">{{ q.reference_name }}</small>
 
           @if (q.type === 'yesno') {
             <div class="flex gap-3">

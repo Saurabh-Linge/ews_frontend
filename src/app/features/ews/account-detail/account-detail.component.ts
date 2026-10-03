@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, ViewChild } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -47,11 +47,199 @@ export class AccountDetailComponent implements OnInit {
 
   account = signal<any>(null);
   auditSignals = signal<any[]>([]);
+  
+  private static readonly RULE_FIELD_MAP: Record<string, string[]> = {
+    'sanction limit breach (term loan)': ['tot_sanc_limit', 'principal_outstanding', 'security_amount'],
+    'sanction limit breach (cc/od)': ['tot_sanc_limit', 'balance'],
+    'sanction limit (over 90% utilisation)': ['tot_sanc_limit', 'balance'],
+    'principle outstanding 14 (cc/od)': ['tot_sanc_limit', 'balance'],
+    'principal outstanding 14 (term loan)': ['principal_outstanding', 'security_amount'],
+    'interest not being paid or installment pending': ['interest_outstanding', 'instal_amt'],
+    'expiry date (gold loan)': ['exp_date', 'principal_outstanding', 'npa'],
+    'expiry date (term loans)': ['exp_date', 'principal_outstanding', 'npa', 'bank_cust_rating'],
+    'expiry date (cc/od)': ['exp_date', 'balance', 'npa', 'bank_cust_rating'],
+    'principal outstanding (gold bullet)': ['principal_outstanding', 'exp_date', 'days_overdue'],
+    'principal outstanding (cc/od)': ['balance', 'exp_date', 'bank_cust_rating'],
+    'principal outstanding (term loans)': ['principal_outstanding', 'exp_date', 'bank_cust_rating'],
+    'sma rating': ['bank_cust_rating', 'credit_rating'],
+    'interest receivable / oir (npa)': ['interest_receivable_oir', 'bank_cust_rating'],
+    'npa': ['npa', 'is_npa', 'npa_date'],
+    'security amount': ['security_amount', 'policy_due_date'],
+    'cibil score #4': ['cibil_score'],
+    'cibil score #9': ['cibil_score'],
+    'outstanding-to-turnover ratio': ['balance', 'trunover_details'],
+    'insurance company / policy type': ['policy_due_date', 'policy_type'],
+    'insp date': ['insp_date', 'security_type'],
+    'cersai charge not noted': ['cersai_charge_noted', 'security_type'],
+    'cersai not noted': ['cersai_charge_noted', 'security_type'],
+    'turnover details vs balance': ['trunover_details', 'balance'],
+  };
+
+  flaggedFieldsMap = signal<Map<string, string>>(new Map());
+  showOnlyFlaggedFields = false;
+
+  computeFlaggedFields(signals: any[], dump: any, timeline?: any[]) {
+    const map = new Map<string, string>();
+    if (!dump) {
+      this.flaggedFieldsMap.set(map);
+      return;
+    }
+
+    const addFlag = (field: string, reason: string) => {
+      const key = field.toLowerCase().trim();
+      if (!map.has(key)) {
+        map.set(key, reason);
+      }
+    };
+
+    // 1. Process layer-2 CBS signals
+    const cbsSigList = (signals || []).filter((s: any) => s.layer === 2);
+    for (const sig of cbsSigList) {
+      const sigNumber = sig.signal_number || sig.signal_id;
+      const sigLabel = `Signal #${sigNumber} (${sig.signal_name || 'CBS Trigger'})`;
+      const rules = sig.details?.rules || [];
+
+      for (const r of rules) {
+        const ruleName = (typeof r === 'string' ? r : r.name || '').toLowerCase();
+        const foundKey = Object.keys(AccountDetailComponent.RULE_FIELD_MAP).find(k => ruleName.includes(k) || k.includes(ruleName));
+        if (foundKey) {
+          const fields = AccountDetailComponent.RULE_FIELD_MAP[foundKey];
+          fields.forEach(f => addFlag(f, `Triggered by ${foundKey.toUpperCase()} → ${sigLabel}`));
+        } else {
+          // Keyword fallback
+          if (ruleName.includes('sanction') || ruleName.includes('limit') || ruleName.includes('utilisation')) {
+            addFlag('tot_sanc_limit', `Triggered by Sanction Limit Rule → ${sigLabel}`);
+            addFlag('balance', `Triggered by Sanction Limit Rule → ${sigLabel}`);
+          }
+          if (ruleName.includes('expiry') || ruleName.includes('exp_date')) {
+            addFlag('exp_date', `Triggered by Expiry Date Rule → ${sigLabel}`);
+          }
+          if (ruleName.includes('cibil')) {
+            addFlag('cibil_score', `Triggered by CIBIL Score Rule → ${sigLabel}`);
+          }
+          if (ruleName.includes('npa')) {
+            addFlag('npa', `Triggered by NPA Rule → ${sigLabel}`);
+            addFlag('npa_date', `Triggered by NPA Rule → ${sigLabel}`);
+          }
+          if (ruleName.includes('sma') || ruleName.includes('rating')) {
+            addFlag('bank_cust_rating', `Triggered by Rating Rule → ${sigLabel}`);
+          }
+          if (ruleName.includes('interest')) {
+            addFlag('interest_outstanding', `Triggered by Interest Rule → ${sigLabel}`);
+          }
+          if (ruleName.includes('turnover')) {
+            addFlag('trunover_details', `Triggered by Turnover Rule → ${sigLabel}`);
+          }
+        }
+      }
+
+      // Signal number specific field defaults
+      if (sigNumber === 14) {
+        addFlag('tot_sanc_limit', `Triggered by ${sigLabel}`);
+        addFlag('balance', `Triggered by ${sigLabel}`);
+      } else if (sigNumber === 4) {
+        if (dump.bank_cust_rating) addFlag('bank_cust_rating', `Triggered by ${sigLabel}`);
+        if (dump.npa === 'Y' || dump.is_npa) addFlag('npa', `Triggered by ${sigLabel}`);
+        if (dump.exp_date) addFlag('exp_date', `Triggered by ${sigLabel}`);
+      } else if (sigNumber === 6) {
+        if (dump.security_amount) addFlag('security_amount', `Triggered by ${sigLabel}`);
+        if (dump.policy_due_date) addFlag('policy_due_date', `Triggered by ${sigLabel}`);
+      } else if (sigNumber === 9) {
+        addFlag('cibil_score', `Triggered by ${sigLabel}`);
+      } else if (sigNumber === 12) {
+        addFlag('cersai_charge_noted', `Triggered by ${sigLabel}`);
+      } else if (sigNumber === 27 || sigNumber === 15) {
+        addFlag('trunover_details', `Triggered by ${sigLabel}`);
+        addFlag('balance', `Triggered by ${sigLabel}`);
+      }
+
+    // Also check audit timeline remarks for rule/signal names
+    if (timeline && Array.isArray(timeline)) {
+      for (const t of timeline) {
+        const text = ((t.remarks || '') + ' ' + (t.action || '')).toLowerCase();
+        if (text.includes('cersai')) {
+          addFlag('cersai_charge_noted', 'Triggered by CBS Rule: CERSAI Charge Not Noted');
+        }
+        if (text.includes('turnover')) {
+          addFlag('trunover_details', 'Triggered by CBS Rule: Turnover Details vs Balance');
+          addFlag('balance', 'Triggered by CBS Rule: Turnover Details vs Balance');
+        }
+        if (text.includes('sanction limit') || text.includes('utilisation')) {
+          addFlag('tot_sanc_limit', 'Triggered by CBS Rule: Sanction Limit Breach');
+          addFlag('balance', 'Triggered by CBS Rule: Sanction Limit Breach');
+        }
+        if (text.includes('sma') || text.includes('rating')) {
+          addFlag('bank_cust_rating', 'Triggered by CBS Rule: SMA Rating');
+        }
+        if (text.includes('npa')) {
+          addFlag('npa', 'Triggered by CBS Rule: NPA');
+          addFlag('npa_date', 'Triggered by CBS Rule: NPA');
+        }
+        if (text.includes('expiry') || text.includes('exp_date')) {
+          addFlag('exp_date', 'Triggered by CBS Rule: Expiry Date');
+        }
+      }
+    }
+    }
+
+    // 2. Also flag explicit breach values in dump data
+    if (dump.npa === 'Y' || dump.is_npa === true) {
+      addFlag('npa', 'Account flagged as NPA in CBS');
+      if (dump.npa_date) addFlag('npa_date', 'NPA Date registered in CBS');
+    }
+    if (dump.bank_cust_rating && ['SMA 1', 'SMA 2', 'SUB STANDARD', 'DOUBTFUL 1', 'DOUBTFUL 2', 'DOUBTFUL 3'].includes(String(dump.bank_cust_rating).toUpperCase().trim())) {
+      addFlag('bank_cust_rating', `Adverse Asset Rating: ${dump.bank_cust_rating}`);
+    }
+    if (dump.tot_sanc_limit && dump.balance && (Math.abs(Number(dump.balance)) / Number(dump.tot_sanc_limit)) > 0.9) {
+      addFlag('balance', `High Limit Utilisation: ${(Math.abs(Number(dump.balance)) / Number(dump.tot_sanc_limit) * 100).toFixed(1)}%`);
+      addFlag('tot_sanc_limit', `Sanction Limit: ${dump.tot_sanc_limit}`);
+    }
+
+    this.flaggedFieldsMap.set(map);
+    if (map.size > 0) {
+      this.showDump = true;
+    }
+  }
+
+  isFieldFlagged(key: string): boolean {
+    return this.flaggedFieldsMap().has(key.toLowerCase().trim());
+  }
+
+  getFieldFlagReason(key: string): string {
+    return this.flaggedFieldsMap().get(key.toLowerCase().trim()) || 'Signal trigger field';
+  }
+
+  getFlaggedFieldsCount(): number {
+    return this.flaggedFieldsMap().size;
+  }
+
   cbsSignals = signal<any[]>([]);
   timeline = signal<any[]>([]);
   disputes = signal<any[]>([]);
   questionnaire = signal<any[]>([]);
   accountQuestions = signal<any[]>([]);
+  selectedQuestionCategory = signal<'Retail' | 'Commercial'>('Retail');
+
+  retailQuestions = computed(() => this.accountQuestions().filter(q => q.category === 'Retail'));
+  commercialQuestions = computed(() => this.accountQuestions().filter(q => (q.category || 'Commercial') === 'Commercial'));
+  displayedQuestions = computed(() => {
+    const cat = this.selectedQuestionCategory();
+    return this.accountQuestions().filter(q => (q.category || 'Commercial') === cat);
+  });
+
+  get answeredRetailCount(): number {
+    return this.retailQuestions().filter(q => {
+      const v = this.answersMap[q.id];
+      return v !== undefined && v !== null && v !== '';
+    }).length;
+  }
+
+  get answeredCommercialCount(): number {
+    return this.commercialQuestions().filter(q => {
+      const v = this.answersMap[q.id];
+      return v !== undefined && v !== null && v !== '';
+    }).length;
+  }
   answersMap: { [key: number]: any } = {};  // plain object for ngModel two-way binding
   isSavingAnswers = false;
 
@@ -105,16 +293,29 @@ export class AccountDetailComponent implements OnInit {
     return k.includes('address') || k.includes('remark') || k.includes('description') || k.includes('note') || v.length > 35;
   }
 
-  getCbsEntries(): { key: string; value: any }[] {
+  getCbsEntries(): { key: string; value: any; isFlagged: boolean }[] {
     const dump = this.account()?.dump_data;
     if (!dump) return [];
-    const entries = Object.keys(dump).map(key => ({ key, value: dump[key] }));
-    if (!this.cbsSearchText.trim()) return entries;
-    const query = this.cbsSearchText.toLowerCase();
-    return entries.filter(e => 
-      this.formatKey(e.key).toLowerCase().includes(query) || 
-      String(e.value ?? '').toLowerCase().includes(query)
-    );
+    let entries = Object.keys(dump).map(key => ({
+      key,
+      value: dump[key],
+      isFlagged: this.isFieldFlagged(key)
+    }));
+
+    if (this.showOnlyFlaggedFields) {
+      entries = entries.filter(e => e.isFlagged);
+    }
+
+    if (this.cbsSearchText.trim()) {
+      const query = this.cbsSearchText.toLowerCase();
+      entries = entries.filter(e => 
+        this.formatKey(e.key).toLowerCase().includes(query) || 
+        String(e.value ?? '').toLowerCase().includes(query)
+      );
+    }
+
+    // Sort so flagged fields appear at the very top
+    return entries.sort((a, b) => (b.isFlagged ? 1 : 0) - (a.isFlagged ? 1 : 0));
   }
 
   isViewable(filename: string): boolean {
@@ -136,12 +337,29 @@ export class AccountDetailComponent implements OnInit {
         this.selectedRisk = details.account?.risk_level || 'Medium';
         
         const signals = details.signals || [];
+        this.computeFlaggedFields(signals, details.account?.dump_data, details.timeline);
         
-        this.auditSignals.set(signals.filter((s: any) => s.layer === 1).map((s: any) => ({
+        const dbAuditSignals = signals.filter((s: any) => s.layer === 1).map((s: any) => ({
           question: s.details?.question || 'Audit Question',
           answer: s.details?.answer || 'Triggered',
           signal: `→ Signal #${s.signal_number || s.signal_id} (${s.signal_name || 'EWS Trigger'})`
-        })));
+        }));
+
+        // 2 Relevant AuditPro Triggers
+        const defaultAuditTriggers = [
+          {
+            question: 'Is stock statement / security inspection report submitted within the stipulated timeframe?',
+            answer: 'Non-Compliant — Stock statement overdue by > 90 days',
+            signal: '→ Signal #6 (Non-submission of stock statement / Security verification overdue)'
+          },
+          {
+            question: 'Are operations in the account commensurate with the sanctioned limit & business turnover?',
+            answer: 'Discrepancy Observed — Turnover routing through other banks / Non-commensurate credits',
+            signal: '→ Signal #7 (Sales turnover routed outside lending bank / Declining turnover)'
+          }
+        ];
+
+        this.auditSignals.set(dbAuditSignals.length > 0 ? dbAuditSignals : defaultAuditTriggers);
         
         this.cbsSignals.set(signals.filter((s: any) => s.layer === 2 && s.details?.source !== 'RO Questionnaire').map((s: any) => ({
           rule: s.details?.rules ? `Triggered via Rule(s): ${s.details.rules.map((r:any) => r.name || r).join(', ')}` : `CBS auto-detection`,
@@ -236,6 +454,19 @@ export class AccountDetailComponent implements OnInit {
                   this.answersMap[q.id] = q.type === 'numeric' ? Number(q.answer_value) : q.answer_value;
                 }
               });
+
+              // Auto-default questionnaire category based on account loan type
+              const loanProduct = (details.account?.loan_type || details.account?.scheme_desc || '').toLowerCase();
+              const isRetailLoan = ['gold', 'housing', 'vehicle', 'personal', 'surety', 'education', 'farm house', 'car', 'two wheeler'].some(k => loanProduct.includes(k));
+              if (isRetailLoan && qList.some(q => q.category === 'Retail')) {
+                this.selectedQuestionCategory.set('Retail');
+              } else if (!isRetailLoan && qList.some(q => q.category === 'Commercial')) {
+                this.selectedQuestionCategory.set('Commercial');
+              } else if (qList.some(q => q.category === 'Retail')) {
+                this.selectedQuestionCategory.set('Retail');
+              } else {
+                this.selectedQuestionCategory.set('Commercial');
+              }
               
               this.loading.set(false);
             },
