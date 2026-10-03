@@ -34,22 +34,16 @@ export interface EwsReportItem {
   template: `
     <p-toast></p-toast>
     
-    <div class="card p-4">
-      <div class="flex flex-column sm:flex-row align-items-start sm:align-items-center justify-content-between gap-3 mb-4 pb-3 border-bottom-1 surface-border">
-        <div>
-          <div class="flex align-items-center gap-2">
-            <h5 class="m-0 text-xl font-bold" style="color: var(--text-color, #102a43); font-weight: 700;">
-              EWS Executive & Regulatory Reports
-            </h5>
-            <span class="px-2.5 py-0.5 text-xs font-bold border-round bg-blue-100 text-blue-800">CRO & RO Enabled</span>
-          </div>
-          <p class="m-0 mt-1 text-sm text-gray-500">Official portfolio risk summaries, RBI compliance analytics, and collateral monitoring reports with Excel and PDF export.</p>
-        </div>
-        <div class="flex align-items-center gap-2">
-          <span class="px-3 py-1 font-bold text-xs border-round bg-slate-100 text-slate-700 border-1 surface-border">
-            {{ reports.length }} Reports Available
-          </span>
-        </div>
+    <p-toast></p-toast>
+    
+    <div class="card p-3">
+      <div class="flex align-items-center justify-content-between mb-3 pb-2 border-bottom-1 surface-border">
+        <h5 class="m-0 text-xl font-bold" style="color: var(--text-color, #102a43);">
+          EWS Reports
+        </h5>
+        <span class="text-xs text-500 font-semibold">
+          {{ reports.length }} Reports
+        </span>
       </div>
       
       <div class="table-container">
@@ -68,44 +62,36 @@ export interface EwsReportItem {
           
           <ng-template #groupHeader let-rowData>
             <tr class="p-rowgroup-header bg-surface-100 border-bottom-1 surface-border">
-              <td style="text-align: center; font-weight: bold; width: 4.5rem; color: var(--text-color-secondary);">#</td>
-              <td colspan="2" class="category-header-title font-extrabold text-blue-700 text-base py-2.5">
-                {{ getCategoryLabel(rowData.category) }} »
+              <td style="text-align: center; font-weight: bold; width: 4rem; color: var(--text-color-secondary);">#</td>
+              <td colspan="2" class="category-header-title font-bold text-700 text-sm py-2">
+                {{ getCategoryLabel(rowData.category) }}
               </td>
             </tr>
           </ng-template>
 
           <ng-template #rowTemplate let-rowData let-rowIndex="rowIndex">
-            <td class="col-sr text-center py-3 font-semibold text-500" style="width: 4.5rem;">
+            <td class="col-sr text-center py-2.5 font-semibold text-400" style="width: 4rem;">
               {{ rowData.srNo }}
             </td>
-            <td class="col-report font-medium py-3">
-              <div class="flex align-items-center gap-2 mb-1 flex-wrap">
-                <span *ngIf="rowData.reportCode" class="px-2 py-0.5 text-xs font-black border-round bg-indigo-50 text-indigo-700 border-1 border-indigo-200">
+            <td class="col-report py-2.5">
+              <div class="flex align-items-center gap-2 mb-1">
+                <span *ngIf="rowData.reportCode" class="px-2 py-0.5 text-xs font-bold border-round bg-blue-50 text-blue-700 border-1 border-blue-200">
                   {{ rowData.reportCode }}
                 </span>
-                <span class="font-bold text-base text-900">{{ rowData.title }}</span>
-                <span *ngFor="let r of rowData.roles" 
-                      class="px-2 py-0.5 text-xs font-bold border-round"
-                      [ngClass]="r === 'CRO' ? 'bg-red-50 text-red-700 border-1 border-red-200' : 'bg-blue-50 text-blue-700 border-1 border-blue-200'">
-                  {{ r }}
-                </span>
+                <span class="font-bold text-sm text-900">{{ rowData.title }}</span>
               </div>
-              <div class="text-xs text-500">
-                {{ rowData.desc }} &middot; 
-                <span class="font-semibold text-700">Frequency: {{ rowData.freq }}</span>
+              <div class="text-xs text-500 line-height-2">
+                {{ rowData.desc }}
               </div>
             </td>
-            <td class="col-action text-center py-3" style="width: 7rem;">
+            <td class="col-action text-center py-2.5" style="width: 6rem;">
               <button 
                 pButton 
                 pRipple 
-                icon="pi pi-external-link" 
-                label="Open"
+                icon="pi pi-arrow-right" 
+                label="View"
                 class="p-button-sm p-button-outlined p-button-primary" 
-                (click)="runReport(rowData)" 
-                pTooltip="Open and Filter Report"
-                tooltipPosition="left">
+                (click)="runReport(rowData)">
               </button>
             </td>
           </ng-template>
@@ -275,9 +261,9 @@ export class EwsReportsComponent implements OnInit {
   ngOnInit() {}
 
   getCategoryLabel(cat: string): string {
-    if (cat === '1_master') return 'Master Reports — Executive & Risk Intelligence';
-    if (cat === '2_portfolio') return 'Branch & Portfolio Analysis Reports';
-    return 'Monitoring & RBI Regulatory Compliance Reports';
+    if (cat === '1_master') return 'Master Reports';
+    if (cat === '2_portfolio') return 'Branch & Portfolio Reports';
+    return 'Monitoring & Compliance Reports';
   }
 
   runReport(report: EwsReportItem) {
