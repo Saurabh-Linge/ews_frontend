@@ -14,24 +14,27 @@ export interface ReportColumn {
   label: string;
   width?: string;
   align?: 'left' | 'center' | 'right';
-  type?: 'text' | 'number' | 'date' | 'status' | 'badge';
+  type?: 'text' | 'number' | 'currency' | 'date' | 'status' | 'badge';
 }
 
 export interface ReportFilter {
   key: string;
   label: string;
-  type: 'select' | 'text' | 'date';
+  type: 'select' | 'text' | 'date' | 'number';
   options?: { label: string; value: any }[];
 }
 
 export interface ReportDefinition {
   slug: string;
+  reportCode?: string;
   title: string;
   category: string;
   desc: string;
+  orientation?: 'portrait' | 'landscape';
   columns: ReportColumn[];
   filters: ReportFilter[];
   defaultFilters: Record<string, any>;
+  notes?: string[];
 }
 
 @Component({
@@ -50,18 +53,26 @@ export interface ReportDefinition {
       <!-- Title, Category and Actions Header (Hidden on Print) -->
       <header class="report-titlebar no-print">
         <div>
-          <span>{{ definition()?.category || 'EWS Reports' }}</span>
+          <div class="flex align-items-center gap-2 mb-1">
+            <span *ngIf="definition()?.reportCode" class="px-2 py-0.5 text-xs font-black border-round bg-blue-100 text-blue-800">
+              {{ definition()?.reportCode }}
+            </span>
+            <span class="report-category-tag">{{ definition()?.category || 'EWS Reports' }}</span>
+          </div>
           <h1>{{ definition()?.title || 'Report' }}</h1>
+          <p class="m-0 mt-1 text-xs text-500">{{ definition()?.desc }}</p>
         </div>
-        <button 
-          pButton 
-          type="button" 
-          icon="pi pi-arrow-left" 
-          label="Reports" 
-          severity="secondary" 
-          [outlined]="true" 
-          (click)="goBack()">
-        </button>
+        <div class="flex align-items-center gap-2">
+          <button 
+            pButton 
+            type="button" 
+            icon="pi pi-arrow-left" 
+            label="Back to Reports" 
+            severity="secondary" 
+            [outlined]="true" 
+            (click)="goBack()">
+          </button>
+        </div>
       </header>
 
       <!-- Filter Panel (Hidden on Print) -->
@@ -77,7 +88,7 @@ export interface ReportDefinition {
               [(ngModel)]="filters()[filter.key]" 
               optionLabel="label" 
               optionValue="value" 
-              [filter]="(filter.options?.length || 0) > 5" 
+              [filter]="(filter.options?.length || 0) > 4" 
               filterBy="label" 
               placeholder="Select..."
               appendTo="body"
@@ -87,17 +98,21 @@ export interface ReportDefinition {
             <!-- Date Input -->
             <input *ngIf="filter.type === 'date'" type="date" [(ngModel)]="filters()[filter.key]" />
 
+            <!-- Number Input -->
+            <input *ngIf="filter.type === 'number'" type="number" [(ngModel)]="filters()[filter.key]" placeholder="Min amount..." />
+
             <!-- Text Input -->
-            <input *ngIf="filter.type === 'text'" type="text" [(ngModel)]="filters()[filter.key]" placeholder="Search..." />
+            <input *ngIf="filter.type === 'text'" type="text" [(ngModel)]="filters()[filter.key]" placeholder="Search..." (keyup.enter)="findReport()" />
           </div>
         </ng-container>
 
         <!-- Filter Actions -->
         <div class="filter-actions">
-          <button pButton type="button" icon="pi pi-search" label="Find" [loading]="loading()" (click)="findReport()"></button>
+          <button pButton type="button" icon="pi pi-search" label="Find / Apply" [loading]="loading()" (click)="findReport()"></button>
           <button pButton type="button" icon="pi pi-refresh" label="Reset" severity="secondary" [outlined]="true" (click)="reset()"></button>
-          <button pButton type="button" icon="pi pi-print" label="Print" severity="secondary" [outlined]="true" [disabled]="rows().length === 0" (click)="print()"></button>
-          <button pButton type="button" icon="pi pi-file-excel" label="Excel" severity="success" [outlined]="true" [disabled]="rows().length === 0" (click)="exportExcel()"></button>
+          <button pButton type="button" icon="pi pi-file-excel" label="Export Excel" severity="success" [disabled]="rows().length === 0 && !hasData()" (click)="exportExcel()"></button>
+          <button pButton type="button" icon="pi pi-file-pdf" label="Export PDF" severity="danger" [disabled]="rows().length === 0 && !hasData()" (click)="exportPdf()"></button>
+          <button pButton type="button" icon="pi pi-print" label="Print" severity="secondary" [outlined]="true" [disabled]="rows().length === 0 && !hasData()" (click)="print()"></button>
         </div>
       </div>
 
@@ -106,10 +121,63 @@ export interface ReportDefinition {
         <i class="pi pi-exclamation-triangle mr-1"></i> {{ error() }}
       </div>
 
-      <!-- Official Print Sheet Container -->
+      <!-- Optional KPI Summary Cards (E.g. CRO Dashboard, Insurance Renewal, CERSAI) -->
+      <div *ngIf="summaryCards().length > 0" class="summary-cards-container">
+        <div *ngFor="let card of summaryCards()" class="kpi-card">
+          <div class="kpi-label">{{ card.label }}</div>
+          <div class="kpi-value" [ngClass]="card.colorClass || 'text-900'">{{ card.value }}</div>
+          <div *ngIf="card.subtext" class="kpi-subtext">{{ card.subtext }}</div>
+        </div>
+      </div>
+
+      <!-- Optional Secondary / Summary Table (E.g. CERSAI Branch Summary or Insurance Buckets) -->
+      <div *ngIf="secondaryTable() && secondaryTable()!.rows.length > 0" class="official-report-sheet mb-3">
+        <div class="flex align-items-center justify-content-between mb-2">
+          <h6 class="m-0 font-bold text-base text-900">{{ secondaryTable()?.title }}</h6>
+          <span class="text-xs text-500 font-medium">Aggregated Summary</span>
+        </div>
+        <div class="official-report-table-wrap overflow-x-auto">
+          <table class="official-report-table w-full border-collapse">
+            <thead>
+              <tr class="bg-surface-100 text-700 font-bold border-bottom-2 surface-border">
+                <th *ngFor="let col of secondaryTable()?.columns"
+                    [class.text-center]="col.align === 'center'"
+                    [class.text-right]="col.align === 'right'"
+                    class="p-2.5 text-xs uppercase tracking-wide font-extrabold">
+                  {{ col.label }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let r of secondaryTable()?.rows" class="border-bottom-1 surface-border hover:bg-surface-50">
+                <td *ngFor="let col of secondaryTable()?.columns"
+                    [class.text-center]="col.align === 'center'"
+                    [class.text-right]="col.align === 'right'"
+                    class="p-2.5 text-xs text-800">
+                  <ng-container [ngSwitch]="col.type">
+                    <ng-container *ngSwitchCase="'currency'">
+                      {{ formatCurrency(r[col.key]) }}
+                    </ng-container>
+                    <ng-container *ngSwitchCase="'status'">
+                      <span class="status-print-badge px-2 py-0.5 text-xs font-bold border-round" [ngClass]="statusSeverity(r[col.key])">
+                        {{ r[col.key] || '—' }}
+                      </span>
+                    </ng-container>
+                    <ng-container *ngSwitchDefault>
+                      {{ r[col.key] ?? '—' }}
+                    </ng-container>
+                  </ng-container>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Official Report Sheet Container -->
       <div class="official-report-sheet">
         
-        <!-- Official Print Header (Visible ONLY when printing, exact CompliancePro format) -->
+        <!-- Official Print Header (Visible ONLY when printing) -->
         <div class="official-report-header print-only">
           <div class="official-report-brand-row">
             <div class="official-report-logo">
@@ -117,14 +185,19 @@ export interface ReportDefinition {
               <span>EWS</span>
             </div>
             <div class="official-report-bank">
-              <p><strong>Report Date:</strong> {{ fullDateTime }}</p>
-              <p><strong>Bank:</strong> RAJARSHI SHAHU SAHAKARI BANK LTD.</p>
+              <p><strong>Bank:</strong> RAJARSHI SHAHU SAHAKARI BANK LTD. PUNE</p>
+              <p><strong>Report:</strong> {{ definition()?.title }}</p>
             </div>
           </div>
           <div class="official-report-meta">
-            <p><strong>Report:</strong> {{ definition()?.title }}</p>
-            <p><strong>Report Run Date:</strong> {{ fullDateTime }}</p>
+            <p><strong>Run Date & Time:</strong> {{ fullDateTime }} | <strong>Source:</strong> CBS Loan Extract As of 31-May-2026</p>
+            <p><strong>Access Privilege:</strong> Chief Risk Officer (CRO) & Risk Officer (RO) Authorized View</p>
           </div>
+        </div>
+
+        <div *ngIf="tableTitle" class="flex align-items-center justify-content-between mb-2">
+          <h6 class="m-0 font-bold text-base text-900">{{ tableTitle }}</h6>
+          <span class="text-xs text-500 font-medium">{{ rows().length }} records displayed</span>
         </div>
 
         <!-- Official Report Data Table -->
@@ -136,33 +209,40 @@ export interface ReportDefinition {
                     [style.width]="col.width || null"
                     [class.text-center]="col.align === 'center'"
                     [class.text-right]="col.align === 'right'"
-                    class="p-3 text-xs uppercase tracking-wide font-extrabold">
+                    class="p-2.5 text-xs uppercase tracking-wide font-extrabold">
                   {{ col.label }}
                 </th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let row of rows(); let idx = index" class="border-bottom-1 surface-border hover:bg-surface-50">
+              <tr *ngFor="let row of rows(); let idx = index" 
+                  class="border-bottom-1 surface-border hover:bg-surface-50"
+                  [ngClass]="{'bg-surface-100 font-bold': isTotalRow(row)}">
                 <td *ngFor="let col of definition()?.columns"
                     [class.text-center]="col.align === 'center'"
                     [class.text-right]="col.align === 'right'"
-                    class="p-3 text-sm text-800">
+                    class="p-2.5 text-xs text-800">
                   
                   <ng-container [ngSwitch]="col.type">
                     <!-- Status / Risk Badge -->
                     <ng-container *ngSwitchCase="'status'">
-                      <span class="status-print-badge px-2.5 py-1 text-xs font-bold border-round-lg inline-flex align-items-center gap-1"
+                      <span class="status-print-badge px-2 py-0.5 text-xs font-bold border-round inline-flex align-items-center gap-1"
                             [ngClass]="statusSeverity(row[col.key])">
                         {{ row[col.key] || '—' }}
                       </span>
                     </ng-container>
 
                     <ng-container *ngSwitchCase="'badge'">
-                      <span class="status-print-badge px-2.5 py-1 text-xs font-bold border-round-lg bg-surface-100 text-700 border-1 surface-border">
-                        {{ row[col.key] || '—' }}
+                      <span class="status-print-badge px-2 py-0.5 text-xs font-bold border-round bg-blue-50 text-blue-700 border-1 border-blue-200">
+                        {{ row[col.key] || '0' }}
                       </span>
                     </ng-container>
                     
+                    <!-- Currency Amount (₹) -->
+                    <ng-container *ngSwitchCase="'currency'">
+                      <span class="font-semibold">{{ formatCurrency(row[col.key]) }}</span>
+                    </ng-container>
+
                     <!-- Date Field -->
                     <ng-container *ngSwitchCase="'date'">
                       {{ formatDate(row[col.key]) }}
@@ -184,13 +264,23 @@ export interface ReportDefinition {
         <div *ngIf="rows().length === 0 && !loading()" class="empty-state p-6 text-center text-500">
           <i class="pi pi-inbox text-4xl text-400 mb-2 block"></i>
           <div class="font-bold text-base text-900 mb-1">No Report Data Found</div>
-          <div class="text-xs">Adjust your search filters above and click 'Find' to generate the report dataset.</div>
+          <div class="text-xs">Adjust your search filters above and click 'Find / Apply' to generate the report dataset.</div>
         </div>
 
         <!-- Loading State -->
         <div *ngIf="loading()" class="p-6 text-center text-500">
           <i class="pi pi-spin pi-spinner text-3xl text-indigo-500 mb-2 block"></i>
-          <div class="font-medium text-sm">Generating report dataset...</div>
+          <div class="font-medium text-sm">Generating official report dataset...</div>
+        </div>
+
+        <!-- Methodology & Assumptions Notes Box -->
+        <div *ngIf="definition()?.notes && definition()!.notes!.length > 0" class="methodology-box mt-4 p-3 border-round surface-50 border-1 surface-border">
+          <div class="font-bold text-xs text-700 mb-1 flex align-items-center gap-1">
+            <i class="pi pi-info-circle text-blue-600"></i> Methodology & Regulatory Assumptions:
+          </div>
+          <ul class="m-0 pl-3 text-xs text-600 line-height-3">
+            <li *ngFor="let n of definition()?.notes">{{ n }}</li>
+          </ul>
         </div>
 
       </div>
@@ -209,7 +299,7 @@ export interface ReportDefinition {
     .empty-state,
     .report-alert {
       border: 1px solid #d7e1eb;
-      border-radius: 6px;
+      border-radius: 8px;
       background: #fff;
     }
 
@@ -217,14 +307,15 @@ export interface ReportDefinition {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: .85rem 1rem;
+      padding: .85rem 1.25rem;
 
-      span {
+      .report-category-tag {
         display: block;
         color: #1f5f93;
         font-size: .72rem;
         font-weight: 800;
         text-transform: uppercase;
+        letter-spacing: 0.5px;
       }
 
       h1 {
@@ -238,35 +329,56 @@ export interface ReportDefinition {
     .filter-panel {
       display: grid;
       grid-template-columns: repeat(12, minmax(0, 1fr));
-      gap: .55rem .65rem;
-      padding: .75rem;
-      align-items: start;
+      gap: .65rem .75rem;
+      padding: 1rem;
+      align-items: end;
+      background: #f8fafc;
     }
 
     .field {
       display: flex;
       flex-direction: column;
       grid-column: span 3;
-      gap: .22rem;
+      gap: .25rem;
 
       label {
-        color: #36516a;
+        color: #334155;
         font-size: .72rem;
         font-weight: 800;
         text-transform: uppercase;
+        letter-spacing: 0.3px;
       }
 
       select,
       input {
         width: 100%;
-        min-height: 2.25rem;
-        border: 1px solid #cbd8e5;
-        border-radius: 5px;
+        min-height: 2.35rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
         background: #fff;
-        color: #102a43;
-        padding: .3rem .5rem;
+        color: #0f172a;
+        padding: .35rem .6rem;
         font: inherit;
+        font-size: 0.85rem;
         box-sizing: border-box;
+      }
+
+      input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 1px #3b82f6;
+      }
+    }
+
+    @media (max-width: 991px) {
+      .field {
+        grid-column: span 6;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .field {
+        grid-column: span 12;
       }
     }
 
@@ -274,9 +386,45 @@ export interface ReportDefinition {
       grid-column: 1 / -1;
       display: flex;
       justify-content: flex-end;
-      gap: .4rem;
+      gap: .5rem;
       flex-wrap: wrap;
-      margin-top: .25rem;
+      margin-top: .4rem;
+      padding-top: .6rem;
+      border-top: 1px dashed #e2e8f0;
+    }
+
+    .summary-cards-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: .75rem;
+    }
+
+    .kpi-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: .75rem .9rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+
+      .kpi-label {
+        font-size: .68rem;
+        font-weight: 800;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        margin-bottom: 2px;
+      }
+
+      .kpi-value {
+        font-size: 1.15rem;
+        font-weight: 800;
+      }
+
+      .kpi-subtext {
+        font-size: .65rem;
+        color: #94a3b8;
+        margin-top: 2px;
+      }
     }
 
     .report-alert {
@@ -288,11 +436,29 @@ export interface ReportDefinition {
     }
 
     .official-report-sheet {
-      padding: 1rem;
+      padding: 1.25rem;
+    }
+
+    .official-report-table-wrap {
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+    }
+
+    .official-report-table {
+      font-size: 0.85rem;
+
+      th {
+        background-color: #f8fafc;
+        border-bottom: 1px solid #cbd5e1;
+      }
+
+      td {
+        border-bottom: 1px solid #f1f5f9;
+      }
     }
 
     @page {
-      size: portrait;
+      size: landscape;
       margin: 8mm 10mm;
     }
 
@@ -302,7 +468,6 @@ export interface ReportDefinition {
 
     ::ng-deep {
       @media print {
-        /* Hide shell layout topbar, sidebar, hamburger icon completely */
         app-topbar,
         app-sidebar,
         app-breadcrumb,
@@ -310,24 +475,16 @@ export interface ReportDefinition {
         .layout-topbar,
         .layout-sidebar,
         .layout-breadcrumb,
-        .layout-menu-button,
-        .layout-topbar-button,
-        .layout-topbar-action,
-        .p-ripple,
-        .pi-bars,
         .no-print {
           display: none !important;
           visibility: hidden !important;
-          opacity: 0 !important;
           height: 0 !important;
           width: 0 !important;
-          overflow: hidden !important;
         }
 
         body, html {
           background: #ffffff !important;
           color: #000000 !important;
-          font-family: "Inter", -apple-system, sans-serif !important;
           margin: 0 !important;
           padding: 0 !important;
         }
@@ -335,11 +492,9 @@ export interface ReportDefinition {
         .layout-main-container,
         .layout-main,
         .report-viewer,
-        .card,
         .official-report-sheet {
           border: none !important;
           box-shadow: none !important;
-          border-radius: 0 !important;
           background: transparent !important;
           padding: 0 !important;
           margin: 0 !important;
@@ -347,125 +502,62 @@ export interface ReportDefinition {
 
         .print-only {
           display: block !important;
-          visibility: visible !important;
-          opacity: 1 !important;
         }
 
         .official-report-header {
           margin-bottom: 12px !important;
-          display: block !important;
         }
 
         .official-report-brand-row {
           display: flex !important;
           justify-content: space-between !important;
           align-items: flex-end !important;
-          border-bottom: 1px solid #cbd8e5 !important;
+          border-bottom: 2px solid #0f172a !important;
           padding-bottom: 6px !important;
-          margin-bottom: 8px !important;
+          margin-bottom: 6px !important;
         }
 
         .official-report-logo {
           background-color: #09233d !important;
           color: #ffffff !important;
-          padding: 6px 14px !important;
+          padding: 6px 12px !important;
+          font-weight: 800 !important;
           display: inline-flex !important;
           align-items: center !important;
-          gap: 8px !important;
-          filter: none !important;
-          backdrop-filter: none !important;
-          box-shadow: none !important;
-          opacity: 1 !important;
+          gap: 6px !important;
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
-
-          i {
-            font-size: 1.25rem !important;
-            color: #ffffff !important;
-            filter: none !important;
-            opacity: 1 !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-
-          span {
-            color: #ffffff !important;
-            font-weight: 800 !important;
-            font-size: 1.15rem !important;
-            text-transform: uppercase !important;
-            letter-spacing: 0.5px !important;
-            line-height: 1 !important;
-            display: block !important;
-            filter: none !important;
-            opacity: 1 !important;
-          }
         }
 
         .official-report-bank {
           text-align: right !important;
           font-size: 0.75rem !important;
-          color: #1e293b !important;
-          p {
-            margin: 2px 0 !important;
-          }
+          p { margin: 2px 0 !important; }
         }
 
         .official-report-meta {
-          display: flex !important;
-          flex-direction: column !important;
-          gap: 2px !important;
-          font-size: 0.75rem !important;
-          color: #1e293b !important;
-          margin-bottom: 12px !important;
-          p {
-            margin: 0 !important;
-          }
-        }
-
-        .official-report-table-wrap {
-          border: 1px solid #cbd8e5 !important;
-          border-radius: 0 !important;
-          width: 100% !important;
-          overflow: visible !important;
+          font-size: 0.7rem !important;
+          color: #475569 !important;
+          margin-bottom: 8px !important;
+          p { margin: 1px 0 !important; }
         }
 
         .official-report-table {
           width: 100% !important;
-          table-layout: fixed !important;
           border-collapse: collapse !important;
-          border-radius: 0 !important;
-
           th {
             background-color: #f1f5f9 !important;
+            color: #000000 !important;
+            border: 1px solid #cbd5e1 !important;
+            font-size: 0.65rem !important;
+            padding: 3px 5px !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
-            color: #000000 !important;
-            border: 1px solid #cbd8e5 !important;
-            border-radius: 0 !important;
-            font-size: 0.65rem !important;
-            font-weight: 800 !important;
-            padding: 0.3rem 0.4rem !important;
-            word-wrap: break-word !important;
-            overflow-wrap: break-word !important;
           }
-
           td {
-            color: #000000 !important;
             border: 1px solid #e2e8f0 !important;
-            border-radius: 0 !important;
             font-size: 0.6rem !important;
-            padding: 0.25rem 0.4rem !important;
-            word-wrap: break-word !important;
-            overflow-wrap: break-word !important;
-            line-height: 1.2 !important;
-          }
-
-          .status-print-badge {
-            font-size: 0.55rem !important;
-            padding: 1px 4px !important;
-            border-radius: 0px !important;
-            font-weight: 700 !important;
-            display: inline-block !important;
+            padding: 2.5px 5px !important;
           }
         }
       }
@@ -482,21 +574,402 @@ export class EwsReportViewerComponent implements OnInit {
   definition = signal<ReportDefinition | null>(null);
   filters = signal<Record<string, any>>({});
   rows = signal<any[]>([]);
+  summaryCards = signal<any[]>([]);
+  secondaryTable = signal<{ title: string; rows: any[]; columns: ReportColumn[] } | null>(null);
+  tableTitle = '';
   loading = signal<boolean>(false);
   error = signal<string | null>(null);
 
   get fullDateTime(): string {
     const d = new Date();
-    const dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '/');
-    const timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const dateStr = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     return `${dateStr} ${timeStr}`;
   }
 
+  hasData(): boolean {
+    return this.rows().length > 0 || (this.secondaryTable()?.rows?.length || 0) > 0 || this.summaryCards().length > 0;
+  }
+
+  isTotalRow(row: any): boolean {
+    return (
+      row.number === 'TOTAL' ||
+      row.branch_code === 'TOTAL' ||
+      row.irac_classification === 'TOTAL' ||
+      row.product_code === 'TOTAL' ||
+      row.status === 'TOTAL'
+    );
+  }
+
   private reportRegistry: Record<string, ReportDefinition> = {
+    // ────────────────────────────────────────────────────────────────────────
+    // REPORT 02 — ACCOUNT SIGNAL DETAIL REPORT
+    // ────────────────────────────────────────────────────────────────────────
+    'account-signal-detail': {
+      slug: 'account-signal-detail',
+      reportCode: 'REPORT 02',
+      title: 'REPORT 02 — ACCOUNT SIGNAL DETAIL REPORT',
+      category: 'Master Reports',
+      orientation: 'landscape',
+      desc: 'Full breakdown of flagged accounts ranked by exposure with risk levels, IRAC staging, and triggering EWS signals.',
+      defaultFilters: { branch: 'all', risk_level: 'all', product: 'all', search: '', min_amount: null },
+      filters: [
+        { key: 'branch', label: 'Branch', type: 'select', options: [{ label: 'All Branches (Bank-Wide)', value: 'all' }] },
+        { 
+          key: 'risk_level', 
+          label: 'Risk Severity', 
+          type: 'select', 
+          options: [
+            { label: 'All Risk Tiers', value: 'all' },
+            { label: 'VERY HIGH Risk', value: 'VERY HIGH' },
+            { label: 'HIGH Risk', value: 'HIGH' },
+            { label: 'MEDIUM Risk', value: 'MEDIUM' }
+          ] 
+        },
+        { key: 'search', label: 'Search Account / Holder', type: 'text' },
+        { key: 'min_amount', label: 'Min Exposure (₹)', type: 'number' }
+      ],
+      columns: [
+        { key: 'branch', label: 'Branch', width: '70px', align: 'center' },
+        { key: 'account_no', label: 'Account No', width: '135px' },
+        { key: 'account_holder', label: 'Account Holder' },
+        { key: 'product', label: 'Product / Facility', width: '180px' },
+        { key: 'principal_os', label: 'Principal O/s (₹)', type: 'currency', width: '130px', align: 'right' },
+        { key: 'signals_fired', label: 'Signals', type: 'badge', width: '70px', align: 'center' },
+        { key: 'signals_triggered', label: 'Signals Triggered (Detail)' },
+        { key: 'irac_rating', label: 'IRAC Staging', type: 'status', width: '110px', align: 'center' },
+        { key: 'overall_risk', label: 'Overall Risk', type: 'status', width: '100px', align: 'center' }
+      ],
+      notes: [
+        'Overall Risk = highest severity across all 14 EWS signals triggered for that account.',
+        'Signals Fired = count of distinct signals triggered based on current CBS attributes.',
+        'Top exposure accounts are prioritized first for CRO and Risk Officer supervisory action.'
+      ]
+    },
+
+    // ────────────────────────────────────────────────────────────────────────
+    // REPORT 04 — BRANCH-WISE EWS SUMMARY
+    // ────────────────────────────────────────────────────────────────────────
+    'branch-wise-summary': {
+      slug: 'branch-wise-summary',
+      reportCode: 'REPORT 04',
+      title: 'REPORT 04 — BRANCH-WISE EWS SUMMARY',
+      category: 'Branch & Portfolio Reports',
+      orientation: 'landscape',
+      desc: 'Branch-by-branch distribution of total portfolio vs flagged accounts, risk tiers, and confirmed NPA accounts.',
+      defaultFilters: { branch: 'all' },
+      filters: [
+        { key: 'branch', label: 'Filter Branch', type: 'select', options: [{ label: 'All 16 Branches', value: 'all' }] }
+      ],
+      columns: [
+        { key: 'branch_code', label: 'Branch Code', width: '90px', align: 'center' },
+        { key: 'branch_name', label: 'Branch Name' },
+        { key: 'total_accounts', label: 'Total A/Cs', type: 'number', width: '95px', align: 'right' },
+        { key: 'total_principal', label: 'Total Principal O/s (₹)', type: 'currency', width: '150px', align: 'right' },
+        { key: 'flagged_accounts', label: 'Flagged A/Cs', type: 'number', width: '105px', align: 'right' },
+        { key: 'pct_flagged', label: '% Flagged', width: '90px', align: 'right' },
+        { key: 'very_high', label: 'Very High', type: 'number', width: '90px', align: 'right' },
+        { key: 'high_risk', label: 'High', type: 'number', width: '85px', align: 'right' },
+        { key: 'medium_risk', label: 'Medium', type: 'number', width: '90px', align: 'right' },
+        { key: 'npa_accounts', label: 'NPA A/Cs', type: 'number', width: '90px', align: 'right' }
+      ],
+      notes: [
+        'Total A/Cs includes all live loan dump accounts for each respective branch.',
+        'Flagged accounts are accounts triggering at least one CBS rule or staging threshold.',
+        '% Flagged represents flagged accounts as a proportion of total branch accounts.'
+      ]
+    },
+
+    // ────────────────────────────────────────────────────────────────────────
+    // REPORT 05 — SIGNAL-WISE DISTRIBUTION
+    // ────────────────────────────────────────────────────────────────────────
+    'signal-wise-distribution': {
+      slug: 'signal-wise-distribution',
+      reportCode: 'REPORT 05',
+      title: 'REPORT 05 — SIGNAL-WISE DISTRIBUTION',
+      category: 'Master Reports',
+      orientation: 'portrait',
+      desc: 'Breakdown of firing EWS signals across Very High, High, and Medium severity tiers with portfolio percentages.',
+      defaultFilters: { branch: 'all' },
+      filters: [
+        { key: 'branch', label: 'Branch', type: 'select', options: [{ label: 'All Branches (Portfolio-Wide)', value: 'all' }] }
+      ],
+      columns: [
+        { key: 'number', label: '#', width: '50px', align: 'center' },
+        { key: 'name', label: 'EWS Early Warning Signal' },
+        { key: 'very_high', label: 'Very High', type: 'number', width: '90px', align: 'right' },
+        { key: 'high', label: 'High', type: 'number', width: '85px', align: 'right' },
+        { key: 'medium', label: 'Medium', type: 'number', width: '85px', align: 'right' },
+        { key: 'total_flagged', label: 'Total Flagged', type: 'number', width: '110px', align: 'right' },
+        { key: 'pct_portfolio', label: '% of Portfolio', width: '110px', align: 'right' }
+      ],
+      notes: [
+        'Counts are per-signal: an account triggering multiple signals is counted in each relevant signal row.',
+        'SMA / IRAC Staging is sourced from CBS Bank Cust Rating; NPA=Y accounts are classified Very High.',
+        'Expiry-based signals are evaluated against system run date.'
+      ]
+    },
+
+    // ────────────────────────────────────────────────────────────────────────
+    // REPORT 06 — LOAN TYPE / PRODUCT RISK REPORT
+    // ────────────────────────────────────────────────────────────────────────
+    'loan-type-risk': {
+      slug: 'loan-type-risk',
+      reportCode: 'REPORT 06',
+      title: 'REPORT 06 — LOAN TYPE / PRODUCT RISK REPORT',
+      category: 'Branch & Portfolio Reports',
+      orientation: 'landscape',
+      desc: 'Risk concentration across 49 loan products in the portfolio: Total accounts, flagged ratios, and risk breakdown.',
+      defaultFilters: { branch: 'all', search: '' },
+      filters: [
+        { key: 'branch', label: 'Branch', type: 'select', options: [{ label: 'All Branches', value: 'all' }] },
+        { key: 'search', label: 'Search Product Name / Code', type: 'text' }
+      ],
+      columns: [
+        { key: 'product_code', label: 'Product Code', width: '100px', align: 'center' },
+        { key: 'product_desc', label: 'Product Description' },
+        { key: 'total_accounts', label: 'Total A/Cs', type: 'number', width: '95px', align: 'right' },
+        { key: 'total_principal', label: 'Total Principal O/s (₹)', type: 'currency', width: '150px', align: 'right' },
+        { key: 'flagged_accounts', label: 'Flagged A/Cs', type: 'number', width: '105px', align: 'right' },
+        { key: 'pct_flagged', label: '% Flagged', width: '90px', align: 'right' },
+        { key: 'very_high', label: 'Very High', type: 'number', width: '90px', align: 'right' },
+        { key: 'high_risk', label: 'High', type: 'number', width: '85px', align: 'right' },
+        { key: 'medium_risk', label: 'Medium', type: 'number', width: '90px', align: 'right' }
+      ],
+      notes: [
+        'All 49 product codes from the CBS dump are analyzed dynamically.',
+        'Gold Loan (Bullet Pay) represents high account counts driven by expiry timing.',
+        'Products with high Very High risk count require focused underwriting review.'
+      ]
+    },
+
+    // ────────────────────────────────────────────────────────────────────────
+    // REPORT 07 — CRO EXECUTIVE DASHBOARD REPORT
+    // ────────────────────────────────────────────────────────────────────────
+    'cro-dashboard-report': {
+      slug: 'cro-dashboard-report',
+      reportCode: 'REPORT 07',
+      title: 'REPORT 07 — CRO EXECUTIVE DASHBOARD REPORT',
+      category: 'Master Reports',
+      orientation: 'landscape',
+      desc: 'Chief Risk Officer & Board risk overview: Portfolio snapshot metrics and Top 30 Very-High-Risk accounts by exposure.',
+      defaultFilters: { branch: 'all', rating: 'all', search: '', min_amount: null },
+      filters: [
+        { key: 'branch', label: 'Branch', type: 'select', options: [{ label: 'All Branches (Whole Bank)', value: 'all' }] },
+        { 
+          key: 'rating', 
+          label: 'IRAC Rating', 
+          type: 'select', 
+          options: [
+            { label: 'All Ratings', value: 'all' },
+            { label: 'STANDARD', value: 'STANDARD' },
+            { label: 'SMA 0', value: 'SMA 0' },
+            { label: 'SMA 1', value: 'SMA 1' },
+            { label: 'SMA 2', value: 'SMA 2' },
+            { label: 'SUB STANDARD', value: 'SUB STANDARD' },
+            { label: 'DOUBTFUL 1', value: 'DOUBTFUL 1' },
+            { label: 'DOUBTFUL 2', value: 'DOUBTFUL 2' },
+            { label: 'DOUBTFUL 3', value: 'DOUBTFUL 3' }
+          ] 
+        },
+        { key: 'search', label: 'Search Account / Holder', type: 'text' }
+      ],
+      columns: [
+        { key: 'branch', label: 'Branch', width: '70px', align: 'center' },
+        { key: 'account_no', label: 'Account No', width: '135px' },
+        { key: 'account_holder', label: 'Account Holder' },
+        { key: 'product', label: 'Product' },
+        { key: 'principal_os', label: 'Principal O/s (₹)', type: 'currency', width: '135px', align: 'right' },
+        { key: 'irac_rating', label: 'IRAC Rating', type: 'status', width: '115px', align: 'center' },
+        { key: 'overall_risk', label: 'Overall Risk', type: 'status', width: '105px', align: 'center' },
+        { key: 'signals', label: 'Signals Fired', type: 'badge', width: '90px', align: 'center' }
+      ],
+      notes: [
+        'Top-ranking accounts are ordered by absolute Principal Outstanding to prioritize largest exposures.',
+        'Confirmed NPA count represents accounts marked NPA=Y in CBS; others are pre-NPA early warning cases.',
+        'Risk Officers must verify recovery or resolution plans for all top accounts.'
+      ]
+    },
+
+    // ────────────────────────────────────────────────────────────────────────
+    // REPORT 09 — RBI / IRAC COMPLIANCE REPORT
+    // ────────────────────────────────────────────────────────────────────────
+    'rbi-compliance-report': {
+      slug: 'rbi-compliance-report',
+      reportCode: 'REPORT 09',
+      title: 'REPORT 09 — RBI / IRAC COMPLIANCE REPORT',
+      category: 'Monitoring & Regulatory Compliance',
+      orientation: 'portrait',
+      desc: 'RBI IRAC asset classification (Standard, SMA 0/1/2, Sub-Standard, Doubtful 1/2/3) with illustrative provisioning calculations.',
+      defaultFilters: { branch: 'all' },
+      filters: [
+        { key: 'branch', label: 'Branch', type: 'select', options: [{ label: 'All Branches (Statutory View)', value: 'all' }] }
+      ],
+      columns: [
+        { key: 'irac_classification', label: 'IRAC Asset Classification', width: '180px' },
+        { key: 'accounts', label: 'A/Cs', type: 'number', width: '95px', align: 'right' },
+        { key: 'principal_os', label: 'Principal O/s (₹)', type: 'currency', width: '150px', align: 'right' },
+        { key: 'provision_pct', label: 'Illustrative Provision %', width: '140px', align: 'right' },
+        { key: 'provision_amount', label: 'Illustrative Provision (₹)', type: 'currency', width: '160px', align: 'right' },
+        { key: 'pct_portfolio_os', label: '% of Portfolio (O/s)', width: '130px', align: 'right' }
+      ],
+      notes: [
+        'IMPORTANT: Provision percentages are illustrative standard RBI IRAC norm rates (assuming fully secured exposure).',
+        'IRAC classification is sourced from the CBS Bank Cust Rating field.',
+        'SMA 0/1/2 are Standard-asset monitoring sub-stages shown for early-warning visibility.',
+        'Final regulatory provisioning figures must be certified by the bank statutory auditor.'
+      ]
+    },
+
+    // ────────────────────────────────────────────────────────────────────────
+    // REPORT 10 — STOCK / SECURITY INSPECTION DUE REPORT
+    // ────────────────────────────────────────────────────────────────────────
+    'inspection-due-report': {
+      slug: 'inspection-due-report',
+      reportCode: 'REPORT 10',
+      title: 'REPORT 10 — STOCK / SECURITY INSPECTION DUE REPORT',
+      category: 'Monitoring & Regulatory Compliance',
+      orientation: 'landscape',
+      desc: 'Periodic inspection audit of Cash Credit (working-capital-against-stock) facilities where inspection is mandated by RBI.',
+      defaultFilters: { branch: 'all', status: 'all', search: '' },
+      filters: [
+        { key: 'branch', label: 'Branch', type: 'select', options: [{ label: 'All Branches', value: 'all' }] },
+        { 
+          key: 'status', 
+          label: 'Inspection Status', 
+          type: 'select', 
+          options: [
+            { label: 'All Statuses', value: 'all' },
+            { label: 'NOT ON RECORD', value: 'NOT ON RECORD' },
+            { label: 'OVERDUE', value: 'OVERDUE' },
+            { label: 'DUE ≤ 30 DAYS', value: 'DUE <= 30 DAYS' },
+            { label: 'CURRENT', value: 'CURRENT' }
+          ] 
+        },
+        { key: 'search', label: 'Search Account / Holder', type: 'text' }
+      ],
+      columns: [
+        { key: 'branch', label: 'Branch', width: '70px', align: 'center' },
+        { key: 'account_no', label: 'Account No', width: '140px' },
+        { key: 'account_holder', label: 'Account Holder' },
+        { key: 'product', label: 'Facility Type' },
+        { key: 'principal_os', label: 'Principal O/s (₹)', type: 'currency', width: '140px', align: 'right' },
+        { key: 'irac_rating', label: 'IRAC Rating', type: 'status', width: '120px', align: 'center' },
+        { key: 'inspection_status', label: 'Inspection Status', type: 'status', width: '130px', align: 'center' }
+      ],
+      notes: [
+        'DATA AUDIT: Insp Date field is verified for Cash Credit (product 1233) working capital accounts.',
+        'Inspection of hypothecated stock is an RBI-mandated periodic control for working capital advances.',
+        'Branches should manually verify last inspection dates from the branch inspection register.'
+      ]
+    },
+
+    // ────────────────────────────────────────────────────────────────────────
+    // REPORT 11 — INSURANCE RENEWAL DUE REPORT
+    // ────────────────────────────────────────────────────────────────────────
+    'insurance-renewal-report': {
+      slug: 'insurance-renewal-report',
+      reportCode: 'REPORT 11',
+      title: 'REPORT 11 — INSURANCE RENEWAL DUE REPORT',
+      category: 'Monitoring & Regulatory Compliance',
+      orientation: 'landscape',
+      desc: 'Collateral insurance audit: LAPSED policies, renewals due in 30/90 days, insurer exposures, and top lapsed accounts.',
+      defaultFilters: { branch: 'all', status: 'all', insurer: 'all', search: '' },
+      filters: [
+        { key: 'branch', label: 'Branch', type: 'select', options: [{ label: 'All Branches', value: 'all' }] },
+        { 
+          key: 'status', 
+          label: 'Policy Status', 
+          type: 'select', 
+          options: [
+            { label: 'All Statuses', value: 'all' },
+            { label: 'LAPSED', value: 'LAPSED' },
+            { label: 'DUE ≤ 30 DAYS', value: 'DUE ≤ 30 DAYS' },
+            { label: 'DUE ≤ 90 DAYS', value: 'DUE ≤ 90 DAYS' },
+            { label: 'CURRENT', value: 'CURRENT' }
+          ] 
+        },
+        { 
+          key: 'insurer', 
+          label: 'Insurance Company', 
+          type: 'select', 
+          options: [
+            { label: 'All Insurers', value: 'all' },
+            { label: 'NATIONAL INSURANCE COMPANY', value: 'NATIONAL INSURANCE' },
+            { label: 'ICICI LOMBARD', value: 'ICICI LOMBARD' },
+            { label: 'NEW INDIA ASSURANCE', value: 'NEW INDIA' },
+            { label: 'UNITED INDIA INSURANCE', value: 'UNITED INDIA' }
+          ] 
+        },
+        { key: 'search', label: 'Search Account / Holder', type: 'text' }
+      ],
+      columns: [
+        { key: 'branch', label: 'Branch', width: '70px', align: 'center' },
+        { key: 'account_no', label: 'Account No', width: '135px' },
+        { key: 'account_holder', label: 'Account Holder' },
+        { key: 'product', label: 'Product / Security' },
+        { key: 'insurer', label: 'Insurer', width: '170px' },
+        { key: 'policy_due', label: 'Policy Due', width: '100px', align: 'center' },
+        { key: 'principal_os', label: 'Principal O/s (₹)', type: 'currency', width: '135px', align: 'right' },
+        { key: 'status', label: 'Status', type: 'status', width: '115px', align: 'center' }
+      ],
+      notes: [
+        'Status buckets are evaluated relative to system current date: LAPSED = Policy Due Date already passed.',
+        '4,142 accounts carry an insurance policy record in this portfolio extract.',
+        'Lapsed insurance on secured collateral directly weakens the bank recovery position and requires immediate renewal notices.'
+      ]
+    },
+
+    // ────────────────────────────────────────────────────────────────────────
+    // REPORT 12 — CERSAI PENDENCY REPORT
+    // ────────────────────────────────────────────────────────────────────────
+    'cersai-pendency-report': {
+      slug: 'cersai-pendency-report',
+      reportCode: 'REPORT 12',
+      title: 'REPORT 12 — CERSAI PENDENCY REPORT',
+      category: 'Monitoring & Regulatory Compliance',
+      orientation: 'landscape',
+      desc: 'Branch-wise summary and top exposures for accounts secured by registered mortgage / immovable property pending CERSAI charge noting.',
+      defaultFilters: { branch: 'all', security_type: 'all', search: '' },
+      filters: [
+        { key: 'branch', label: 'Branch', type: 'select', options: [{ label: 'All Branches', value: 'all' }] },
+        { 
+          key: 'security_type', 
+          label: 'Security Type', 
+          type: 'select', 
+          options: [
+            { label: 'All Mortgage Types', value: 'all' },
+            { label: 'REGISTER MORTGAGE', value: 'REGISTER MORTGAGE' },
+            { label: 'LAND & BUILDING', value: 'LAND & BUILDING' },
+            { label: 'FLAT / BUNGLOW', value: 'BUNGLOW' }
+          ] 
+        },
+        { key: 'search', label: 'Search Account / Holder', type: 'text' }
+      ],
+      columns: [
+        { key: 'branch', label: 'Branch', width: '70px', align: 'center' },
+        { key: 'account_no', label: 'Account No', width: '140px' },
+        { key: 'account_holder', label: 'Account Holder' },
+        { key: 'security_type', label: 'Collateral Security Type' },
+        { key: 'principal_os', label: 'Principal O/s (₹)', type: 'currency', width: '150px', align: 'right' },
+        { key: 'status', label: 'CERSAI Status', type: 'status', width: '110px', align: 'center' }
+      ],
+      notes: [
+        'Scope = accounts secured by registered mortgage or land & building collateral where CERSAI Charge Noted != YES.',
+        'CERSAI registration protects the bank charge priority; unregistered charges are legally vulnerable to competing claims.',
+        'Gold, vehicle, FD, and surety loans are out of scope for CERSAI by design and excluded.'
+      ]
+    },
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Legacy Operational Reports
+    // ────────────────────────────────────────────────────────────────────────
     'current-ews-watchlist': {
       slug: 'current-ews-watchlist',
+      reportCode: 'EWS-WL',
       title: 'Current EWS Watch List Report',
       category: 'Master Reports',
+      orientation: 'landscape',
       desc: 'All active portfolio accounts on watch list with signal count, risk severity, and days on list.',
       defaultFilters: { branch: 'all', risk_level: 'all', search: '' },
       filters: [
@@ -505,179 +978,57 @@ export class EwsReportViewerComponent implements OnInit {
         { key: 'search', label: 'Search Account / Borrower', type: 'text' }
       ],
       columns: [
-        { key: 'account_id', label: 'Acc No', width: '100px' },
+        { key: 'account_id', label: 'Acc No', width: '120px' },
         { key: 'borrower_name', label: 'Borrower Name' },
         { key: 'branch', label: 'Branch', width: '110px' },
-        { key: 'loan_type', label: 'Loan Type', width: '120px' },
-        { key: 'risk_level', label: 'Risk Level', type: 'status', width: '100px', align: 'center' },
-        { key: 'signal_count', label: 'Signals', width: '80px', align: 'center' },
-        { key: 'status', label: 'Status', type: 'status', width: '120px', align: 'center' }
-      ]
-    },
-    'individual-borrower-ews': {
-      slug: 'individual-borrower-ews',
-      title: 'Individual Borrower EWS Report',
-      category: 'Master Reports',
-      desc: 'Full signal history, Risk Officer assessment, and audit trail for a specific borrower.',
-      defaultFilters: { search: '' },
-      filters: [
-        { key: 'search', label: 'Borrower Account ID or Name', type: 'text' }
-      ],
-      columns: [
-        { key: 'account_id', label: 'Acc No', width: '100px' },
-        { key: 'borrower_name', label: 'Borrower Name' },
-        { key: 'branch', label: 'Branch', width: '110px' },
-        { key: 'risk_level', label: 'Risk Level', type: 'status', width: '100px', align: 'center' },
-        { key: 'sanction_amount', label: 'Sanction Amt', width: '120px', align: 'right' },
-        { key: 'outstanding', label: 'Outstanding', width: '120px', align: 'right' },
-        { key: 'status', label: 'Status', type: 'status', width: '120px', align: 'center' }
-      ]
-    },
-    'high-risk-priority': {
-      slug: 'high-risk-priority',
-      title: 'High Risk Priority Action Report',
-      category: 'Master Reports',
-      desc: 'Critical High risk accounts requiring immediate Chief Risk Officer review.',
-      defaultFilters: { branch: 'all' },
-      filters: [
-        { key: 'branch', label: 'Branch', type: 'select', options: [{ label: 'All Branches', value: 'all' }] }
-      ],
-      columns: [
-        { key: 'account_id', label: 'Acc No', width: '100px' },
-        { key: 'borrower_name', label: 'Borrower Name' },
-        { key: 'branch', label: 'Branch', width: '110px' },
-        { key: 'loan_type', label: 'Loan Type', width: '120px' },
-        { key: 'risk_level', label: 'Risk Level', type: 'status', width: '100px', align: 'center' },
-        { key: 'added_by', label: 'Flagged By', width: '120px' },
-        { key: 'status', label: 'Status', type: 'status', width: '120px', align: 'center' }
-      ]
-    },
-    'signal-distribution': {
-      slug: 'signal-distribution',
-      title: 'Signal-wise Distribution Report',
-      category: 'Master Reports',
-      desc: 'Breakdown of firing EWS signals across CBS and manual questionnaires.',
-      defaultFilters: { category: 'all' },
-      filters: [
-        { key: 'category', label: 'Signal Category', type: 'select', options: [{ label: 'All Categories', value: 'all' }, { label: 'CBS Auto', value: 'CBS' }, { label: 'AuditPro', value: 'AuditPro' }] }
-      ],
-      columns: [
-        { key: 'number', label: 'Signal #', width: '80px', align: 'center' },
-        { key: 'name', label: 'Signal Name' },
-        { key: 'category', label: 'Category', width: '120px' },
-        { key: 'weight', label: 'Weight Score', width: '90px', align: 'center' },
-        { key: 'enabled', label: 'Status', type: 'badge', width: '90px', align: 'center' }
-      ]
-    },
-    'branch-risk-summary': {
-      slug: 'branch-risk-summary',
-      title: 'Branch Risk Summary Report',
-      category: 'Branch & Portfolio Reports',
-      desc: 'Per-branch flagged accounts, pending responses, and resolution efficiency rates.',
-      defaultFilters: { branch: 'all' },
-      filters: [
-        { key: 'branch', label: 'Branch', type: 'select', options: [{ label: 'All Branches', value: 'all' }] }
-      ],
-      columns: [
-        { key: 'branch', label: 'Branch Name' },
-        { key: 'total_flagged', label: 'Total Flagged', width: '110px', align: 'center' },
-        { key: 'high_risk', label: 'High Risk', width: '95px', align: 'center' },
-        { key: 'medium_risk', label: 'Medium Risk', width: '95px', align: 'center' },
-        { key: 'low_risk', label: 'Low Risk', width: '95px', align: 'center' },
-        { key: 'pending_inv', label: 'Pending Inv.', width: '110px', align: 'center' }
+        { key: 'loan_type', label: 'Loan Type', width: '160px' },
+        { key: 'risk_level', label: 'Risk Level', type: 'status', width: '110px', align: 'center' },
+        { key: 'signal_count', label: 'Signals', type: 'badge', width: '80px', align: 'center' },
+        { key: 'status', label: 'Status', type: 'status', width: '130px', align: 'center' }
       ]
     },
     'bankwide-ews-health': {
       slug: 'bankwide-ews-health',
-      title: 'Bank-wide EWS Health Report',
+      reportCode: 'EWS-HLTH',
+      title: 'Bank-Wide EWS Health Report',
       category: 'Branch & Portfolio Reports',
+      orientation: 'landscape',
       desc: 'Overall EWS activity across all branches for Board and executive management.',
       defaultFilters: { status: 'all' },
       filters: [
-        { key: 'status', label: 'Account Status', type: 'select', options: [{ label: 'All Statuses', value: 'all' }, { label: 'Under investigation', value: 'Under investigation' }, { label: 'Escalated', value: 'Escalated' }, { label: 'Normal', value: 'Normal' }] }
+        { key: 'status', label: 'Account Status', type: 'select', options: [{ label: 'All Statuses', value: 'all' }, { label: 'Under investigation', value: 'Under investigation' }, { label: 'Escalated', value: 'Escalated' }, { label: 'Pending review', value: 'Pending review' }] }
       ],
       columns: [
-        { key: 'account_id', label: 'Acc No', width: '100px' },
+        { key: 'account_id', label: 'Acc No', width: '120px' },
         { key: 'borrower_name', label: 'Borrower Name' },
         { key: 'branch', label: 'Branch', width: '110px' },
-        { key: 'risk_level', label: 'Risk Level', type: 'status', width: '100px', align: 'center' },
+        { key: 'risk_level', label: 'Risk Level', type: 'status', width: '110px', align: 'center' },
         { key: 'source', label: 'Source', width: '110px' },
-        { key: 'status', label: 'Status', type: 'status', width: '120px', align: 'center' }
-      ]
-    },
-    'period-trend-comparison': {
-      slug: 'period-trend-comparison',
-      title: 'Period Trend & Comparison Report',
-      category: 'Branch & Portfolio Reports',
-      desc: 'Month-over-month early warning trends and risk migration analytics.',
-      defaultFilters: { search: '' },
-      filters: [
-        { key: 'search', label: 'Filter Keyword', type: 'text' }
-      ],
-      columns: [
-        { key: 'account_id', label: 'Acc No', width: '100px' },
-        { key: 'borrower_name', label: 'Borrower Name' },
-        { key: 'branch', label: 'Branch', width: '110px' },
-        { key: 'risk_level', label: 'Risk Level', type: 'status', width: '100px', align: 'center' },
-        { key: 'added_at', label: 'Added On', type: 'date', width: '110px' },
-        { key: 'status', label: 'Current Status', type: 'status', width: '120px', align: 'center' }
-      ]
-    },
-    'investigation-status-log': {
-      slug: 'investigation-status-log',
-      title: 'Investigation Status & Response Log',
-      category: 'Monitoring & Audit Reports',
-      desc: 'All open investigations with branch response status and pending timelines.',
-      defaultFilters: { branch: 'all' },
-      filters: [
-        { key: 'branch', label: 'Branch', type: 'select', options: [{ label: 'All Branches', value: 'all' }] }
-      ],
-      columns: [
-        { key: 'account_id', label: 'Acc No', width: '100px' },
-        { key: 'borrower_name', label: 'Borrower Name' },
-        { key: 'branch', label: 'Branch', width: '110px' },
-        { key: 'sent_at', label: 'Sent On', type: 'date', width: '110px' },
-        { key: 'status', label: 'Branch Response', type: 'status', width: '140px', align: 'center' }
-      ]
-    },
-    'overdue-branch-response': {
-      slug: 'overdue-branch-response',
-      title: 'Overdue Branch Response Report',
-      category: 'Monitoring & Audit Reports',
-      desc: 'Flagged accounts where branch managers have exceeded investigation deadlines.',
-      defaultFilters: { branch: 'all' },
-      filters: [
-        { key: 'branch', label: 'Branch', type: 'select', options: [{ label: 'All Branches', value: 'all' }] }
-      ],
-      columns: [
-        { key: 'account_id', label: 'Acc No', width: '100px' },
-        { key: 'borrower_name', label: 'Borrower Name' },
-        { key: 'branch', label: 'Branch', width: '110px' },
-        { key: 'sent_at', label: 'Sent On', type: 'date', width: '110px' },
-        { key: 'days_open', label: 'Overdue Days', width: '100px', align: 'center' },
-        { key: 'status', label: 'Status', type: 'status', width: '120px', align: 'center' }
+        { key: 'status', label: 'Status', type: 'status', width: '130px', align: 'center' }
       ]
     },
     'system-inspection-audit': {
       slug: 'system-inspection-audit',
+      reportCode: 'AUDIT',
       title: 'System Inspection & Audit Trail',
-      category: 'Monitoring & Audit Reports',
+      category: 'Monitoring & Regulatory Compliance',
+      orientation: 'landscape',
       desc: 'Complete timestamped audit log of all system changes for RBI inspection.',
       defaultFilters: { search: '' },
       filters: [
         { key: 'search', label: 'Search Action or User', type: 'text' }
       ],
       columns: [
-        { key: 'action', label: 'Action Executed' },
+        { key: 'action', label: 'Action Executed', width: '180px' },
         { key: 'meta', label: 'Audit Metadata' },
-        { key: 'created_at', label: 'Timestamp', type: 'date', width: '140px' }
+        { key: 'created_at', label: 'Timestamp', type: 'date', width: '150px' }
       ]
     }
   };
 
   ngOnInit() {
     this.route.paramMap.subscribe(params => {
-      const slug = params.get('reportSlug') || 'current-ews-watchlist';
+      const slug = params.get('reportSlug') || 'account-signal-detail';
       this.reportSlug.set(slug);
       this.loadBranchesAndReport(slug);
     });
@@ -685,11 +1036,14 @@ export class EwsReportViewerComponent implements OnInit {
 
   loadBranchesAndReport(slug: string) {
     this.loading.set(true);
-    const def = this.reportRegistry[slug] || this.reportRegistry['current-ews-watchlist'];
+    const def = this.reportRegistry[slug] || this.reportRegistry['account-signal-detail'];
     
     this.ewsApi.getBranches().subscribe({
       next: (branches: any[]) => {
-        const branchOpts = [{ label: 'All Branches', value: 'all' }, ...(branches || []).map(b => ({ label: b.name, value: b.name }))];
+        const branchOpts = [
+          { label: 'All Branches (Whole Bank)', value: 'all' },
+          ...(branches || []).map(b => ({ label: `${b.name} (${b.code})`, value: b.code }))
+        ];
         def.filters.forEach(f => {
           if (f.key === 'branch') f.options = branchOpts;
         });
@@ -698,6 +1052,14 @@ export class EwsReportViewerComponent implements OnInit {
         this.loadReportData();
       },
       error: () => {
+        // Fallback with standard 16 branches
+        const fallbackBranches = [
+          { label: 'All Branches (Whole Bank)', value: 'all' },
+          ...Array.from({ length: 16 }, (_, i) => ({ label: `Branch ${i + 1}`, value: String(i + 1) }))
+        ];
+        def.filters.forEach(f => {
+          if (f.key === 'branch') f.options = fallbackBranches;
+        });
         this.definition.set(def);
         this.filters.set({ ...def.defaultFilters });
         this.loadReportData();
@@ -710,66 +1072,323 @@ export class EwsReportViewerComponent implements OnInit {
     const activeFilters = this.filters();
     this.loading.set(true);
     this.error.set(null);
+    this.summaryCards.set([]);
+    this.secondaryTable.set(null);
+    this.tableTitle = '';
 
-    if (slug === 'signal-distribution') {
-      this.ewsApi.getSignals().subscribe({
-        next: (signals: any[]) => {
-          let filtered = signals || [];
-          if (activeFilters['category'] && activeFilters['category'] !== 'all') {
-            filtered = filtered.filter(s => (s.category || '').toLowerCase().includes(activeFilters['category'].toLowerCase()));
-          }
-          this.rows.set(filtered.map(s => ({
-            ...s,
-            enabled: s.enabled ? 'ACTIVE' : 'DISABLED'
-          })));
+    // ────────────────────────────────────────────────────────────────────────
+    // REPORT 02 — ACCOUNT SIGNAL DETAIL
+    // ────────────────────────────────────────────────────────────────────────
+    if (slug === 'account-signal-detail') {
+      this.ewsApi.getAccountSignalDetailReport(activeFilters).subscribe({
+        next: (data: any[]) => {
+          this.rows.set(data || []);
+          this.tableTitle = 'Flagged Portfolio Accounts (Ranked by Exposure)';
           this.loading.set(false);
         },
-        error: () => {
-          this.error.set('Failed to retrieve signal distribution data.');
+        error: (err) => {
+          this.error.set('Failed to load Account Signal Detail Report.');
           this.loading.set(false);
         }
       });
-    } else if (slug === 'system-inspection-audit') {
-      this.ewsApi.getAuditTrail().subscribe({
-        next: (trail: any[]) => {
-          let filtered = trail || [];
-          if (activeFilters['search']) {
-            const q = activeFilters['search'].toLowerCase();
-            filtered = filtered.filter(t => (t.action || '').toLowerCase().includes(q) || (t.meta || '').toLowerCase().includes(q));
-          }
-          this.rows.set(filtered);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // REPORT 04 — BRANCH-WISE SUMMARY
+    // ────────────────────────────────────────────────────────────────────────
+    else if (slug === 'branch-wise-summary') {
+      this.ewsApi.getBranchWiseSummaryReport(activeFilters).subscribe({
+        next: (data: any[]) => {
+          const list = data || [];
+          let sumAcc = 0;
+          let sumOs = 0;
+          let sumFlagged = 0;
+          let sumVh = 0;
+          let sumH = 0;
+          let sumM = 0;
+          let sumNpa = 0;
+
+          list.forEach(r => {
+            sumAcc += Number(r.total_accounts) || 0;
+            sumOs += Number(r.total_principal) || 0;
+            sumFlagged += Number(r.flagged_accounts) || 0;
+            sumVh += Number(r.very_high) || 0;
+            sumH += Number(r.high_risk) || 0;
+            sumM += Number(r.medium_risk) || 0;
+            sumNpa += Number(r.npa_accounts) || 0;
+          });
+
+          this.summaryCards.set([
+            { label: 'Total Branches', value: String(list.length), colorClass: 'text-indigo-600' },
+            { label: 'Total Accounts', value: sumAcc.toLocaleString('en-IN'), colorClass: 'text-slate-800' },
+            { label: 'Total Principal O/s', value: this.formatCurrency(sumOs), colorClass: 'text-slate-900' },
+            { label: 'Flagged Accounts', value: sumFlagged.toLocaleString('en-IN'), colorClass: 'text-amber-600', subtext: `${((sumFlagged / (sumAcc || 1)) * 100).toFixed(1)}% of Portfolio` },
+            { label: 'Confirmed NPAs', value: sumNpa.toLocaleString('en-IN'), colorClass: 'text-red-600' },
+          ]);
+
+          const totalRow = {
+            branch_code: 'TOTAL',
+            branch_name: 'TOTAL (BANK-WIDE)',
+            total_accounts: sumAcc,
+            total_principal: sumOs,
+            flagged_accounts: sumFlagged,
+            pct_flagged: ((sumFlagged / (sumAcc || 1)) * 100).toFixed(1) + '%',
+            very_high: sumVh,
+            high_risk: sumH,
+            medium_risk: sumM,
+            npa_accounts: sumNpa
+          };
+
+          this.rows.set([...list, totalRow]);
+          this.tableTitle = 'Branch-by-Branch Portfolio Risk Matrix';
           this.loading.set(false);
         },
         error: () => {
-          this.error.set('Failed to retrieve audit trail logs.');
+          this.error.set('Failed to load Branch-Wise EWS Summary.');
           this.loading.set(false);
         }
       });
-    } else if (slug === 'investigation-status-log' || slug === 'overdue-branch-response') {
-      this.ewsApi.getInvestigations().subscribe({
-        next: (inv: any[]) => {
-          let filtered = inv || [];
-          if (activeFilters['branch'] && activeFilters['branch'] !== 'all') {
-            filtered = filtered.filter(i => i.branch === activeFilters['branch']);
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // REPORT 05 — SIGNAL-WISE DISTRIBUTION
+    // ────────────────────────────────────────────────────────────────────────
+    else if (slug === 'signal-wise-distribution') {
+      this.ewsApi.getSignalWiseDistributionReport(activeFilters).subscribe({
+        next: (res: any) => {
+          const list = res?.signals || [];
+          if (res?.total_summary) {
+            this.rows.set([...list, res.total_summary]);
+          } else {
+            this.rows.set(list);
           }
-          if (slug === 'overdue-branch-response') {
-            filtered = filtered.filter(i => (i.days_open || 0) > 3);
-          }
-          this.rows.set(filtered);
+          this.summaryCards.set([
+            { label: 'EWS Signals Evaluated', value: '14 Core Signals', colorClass: 'text-blue-700' },
+            { label: 'Total Portfolio Accounts', value: (res?.total_portfolio || 8523).toLocaleString('en-IN'), colorClass: 'text-slate-800' },
+            { label: 'Signal Triggers (Total)', value: (res?.total_summary?.total_flagged || 0).toLocaleString('en-IN'), colorClass: 'text-amber-700' }
+          ]);
+          this.tableTitle = 'Signal Frequency & Risk Classification Matrix';
           this.loading.set(false);
         },
         error: () => {
-          this.error.set('Failed to retrieve investigation report data.');
+          this.error.set('Failed to load Signal-Wise Distribution Report.');
           this.loading.set(false);
         }
       });
-    } else {
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // REPORT 06 — LOAN TYPE RISK REPORT
+    // ────────────────────────────────────────────────────────────────────────
+    else if (slug === 'loan-type-risk') {
+      this.ewsApi.getLoanTypeRiskReport(activeFilters).subscribe({
+        next: (data: any[]) => {
+          const list = data || [];
+          let sumAcc = 0;
+          let sumOs = 0;
+          let sumFlagged = 0;
+          let sumVh = 0;
+          let sumH = 0;
+          let sumM = 0;
+
+          list.forEach(r => {
+            sumAcc += Number(r.total_accounts) || 0;
+            sumOs += Number(r.total_principal) || 0;
+            sumFlagged += Number(r.flagged_accounts) || 0;
+            sumVh += Number(r.very_high) || 0;
+            sumH += Number(r.high_risk) || 0;
+            sumM += Number(r.medium_risk) || 0;
+          });
+
+          this.summaryCards.set([
+            { label: 'Active Loan Products', value: String(list.length), colorClass: 'text-blue-700' },
+            { label: 'Total Portfolio Accounts', value: sumAcc.toLocaleString('en-IN'), colorClass: 'text-slate-800' },
+            { label: 'Total Exposure O/s', value: this.formatCurrency(sumOs), colorClass: 'text-slate-900' },
+            { label: 'Total Flagged A/Cs', value: sumFlagged.toLocaleString('en-IN'), colorClass: 'text-amber-700', subtext: `${((sumFlagged / (sumAcc || 1)) * 100).toFixed(1)}% Flagged` }
+          ]);
+
+          const totalRow = {
+            product_code: 'TOTAL',
+            product_desc: 'ALL PRODUCTS TOTAL',
+            total_accounts: sumAcc,
+            total_principal: sumOs,
+            flagged_accounts: sumFlagged,
+            pct_flagged: ((sumFlagged / (sumAcc || 1)) * 100).toFixed(1) + '%',
+            very_high: sumVh,
+            high_risk: sumH,
+            medium_risk: sumM
+          };
+
+          this.rows.set([...list, totalRow]);
+          this.tableTitle = 'Loan Product Risk Concentrations';
+          this.loading.set(false);
+        },
+        error: () => {
+          this.error.set('Failed to load Loan Type Risk Report.');
+          this.loading.set(false);
+        }
+      });
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // REPORT 07 — CRO DASHBOARD REPORT
+    // ────────────────────────────────────────────────────────────────────────
+    else if (slug === 'cro-dashboard-report') {
+      this.ewsApi.getCroDashboardReport(activeFilters).subscribe({
+        next: (res: any) => {
+          const s = res?.snapshot || {};
+          this.summaryCards.set([
+            { label: 'Total Accounts', value: (Number(s.total_accounts) || 0).toLocaleString('en-IN'), colorClass: 'text-slate-800' },
+            { label: 'Principal Outstanding', value: this.formatCurrency(s.total_principal), colorClass: 'text-slate-900' },
+            { label: 'Flagged Accounts', value: (Number(s.flagged_accounts) || 0).toLocaleString('en-IN'), colorClass: 'text-amber-600' },
+            { label: 'Confirmed NPAs', value: (Number(s.confirmed_npa) || 0).toLocaleString('en-IN'), colorClass: 'text-red-700' },
+            { label: 'Very High Risk', value: (Number(s.very_high) || 0).toLocaleString('en-IN'), colorClass: 'text-red-600' },
+            { label: 'High Risk', value: (Number(s.high_risk) || 0).toLocaleString('en-IN'), colorClass: 'text-orange-600' },
+            { label: 'Medium Risk', value: (Number(s.medium_risk) || 0).toLocaleString('en-IN'), colorClass: 'text-yellow-600' }
+          ]);
+          this.rows.set(res?.top_accounts || []);
+          this.tableTitle = 'Top Very-High-Risk Accounts by Exposure';
+          this.loading.set(false);
+        },
+        error: () => {
+          this.error.set('Failed to load CRO Executive Dashboard Report.');
+          this.loading.set(false);
+        }
+      });
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // REPORT 09 — RBI / IRAC COMPLIANCE
+    // ────────────────────────────────────────────────────────────────────────
+    else if (slug === 'rbi-compliance-report') {
+      this.ewsApi.getRbiComplianceReport(activeFilters).subscribe({
+        next: (res: any) => {
+          const list = res?.classes || [];
+          if (res?.total) {
+            this.rows.set([...list, res.total]);
+            this.summaryCards.set([
+              { label: 'Total Portfolio Accounts', value: (Number(res.total.accounts) || 0).toLocaleString('en-IN'), colorClass: 'text-slate-800' },
+              { label: 'Total Portfolio O/s', value: this.formatCurrency(res.total.principal_os), colorClass: 'text-slate-900' },
+              { label: 'Illustrative Provision Required', value: this.formatCurrency(res.total.provision_amount), colorClass: 'text-red-700', subtext: 'Based on RBI IRAC Norm Rates' }
+            ]);
+          } else {
+            this.rows.set(list);
+          }
+          this.tableTitle = 'RBI Asset Classification & Illustrative Provisioning Matrix';
+          this.loading.set(false);
+        },
+        error: () => {
+          this.error.set('Failed to load RBI / IRAC Compliance Report.');
+          this.loading.set(false);
+        }
+      });
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // REPORT 10 — STOCK / SECURITY INSPECTION DUE
+    // ────────────────────────────────────────────────────────────────────────
+    else if (slug === 'inspection-due-report') {
+      this.ewsApi.getInspectionDueReport(activeFilters).subscribe({
+        next: (data: any[]) => {
+          this.rows.set(data || []);
+          const totalOs = (data || []).reduce((acc, r) => acc + (Number(r.principal_os) || 0), 0);
+          this.summaryCards.set([
+            { label: 'Cash Credit Facilities', value: String(data?.length || 0), colorClass: 'text-indigo-700' },
+            { label: 'Total Exposure O/s', value: this.formatCurrency(totalOs), colorClass: 'text-slate-900' },
+            { label: 'Inspection Status', value: 'Manual Audit Pending', colorClass: 'text-amber-700', subtext: 'Insp Date Not Populated in CBS' }
+          ]);
+          this.tableTitle = 'Cash Credit Facilities Inspection Compliance';
+          this.loading.set(false);
+        },
+        error: () => {
+          this.error.set('Failed to load Inspection Due Report.');
+          this.loading.set(false);
+        }
+      });
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // REPORT 11 — INSURANCE RENEWAL DUE REPORT
+    // ────────────────────────────────────────────────────────────────────────
+    else if (slug === 'insurance-renewal-report') {
+      this.ewsApi.getInsuranceRenewalReport(activeFilters).subscribe({
+        next: (res: any) => {
+          const buckets = res?.summary || [];
+          const lapsedBucket = buckets.find((b: any) => b.status === 'LAPSED') || {};
+          const due30Bucket = buckets.find((b: any) => b.status === 'DUE ≤ 30 DAYS') || {};
+          const currentBucket = buckets.find((b: any) => b.status === 'CURRENT') || {};
+
+          this.summaryCards.set([
+            { label: 'Total Insured A/Cs', value: (res?.total_insured_accounts || 0).toLocaleString('en-IN'), colorClass: 'text-slate-800' },
+            { label: 'Total Insured Exposure', value: this.formatCurrency(res?.total_insured_os), colorClass: 'text-slate-900' },
+            { label: 'LAPSED Policies', value: (lapsedBucket.accounts || 0).toLocaleString('en-IN'), colorClass: 'text-red-700', subtext: `${this.formatCurrency(lapsedBucket.total_principal)} affected (${lapsedBucket.pct_insured})` },
+            { label: 'Due ≤ 30 Days', value: (due30Bucket.accounts || 0).toLocaleString('en-IN'), colorClass: 'text-orange-600', subtext: this.formatCurrency(due30Bucket.total_principal) },
+            { label: 'CURRENT Policies', value: (currentBucket.accounts || 0).toLocaleString('en-IN'), colorClass: 'text-emerald-700', subtext: currentBucket.pct_insured }
+          ]);
+
+          this.secondaryTable.set({
+            title: 'Insurance Status Summary Buckets',
+            rows: buckets,
+            columns: [
+              { key: 'status', label: 'Policy Status', type: 'status', width: '150px' },
+              { key: 'accounts', label: 'A/Cs Count', type: 'number', align: 'right', width: '100px' },
+              { key: 'total_principal', label: 'Total Principal O/s (₹)', type: 'currency', align: 'right' },
+              { key: 'pct_insured', label: '% of Insured A/Cs', align: 'right', width: '130px' }
+            ]
+          });
+
+          this.rows.set(res?.accounts || []);
+          this.tableTitle = 'Top Lapsed & Approaching Insurance Accounts by Exposure';
+          this.loading.set(false);
+        },
+        error: () => {
+          this.error.set('Failed to load Insurance Renewal Due Report.');
+          this.loading.set(false);
+        }
+      });
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // REPORT 12 — CERSAI PENDENCY REPORT
+    // ────────────────────────────────────────────────────────────────────────
+    else if (slug === 'cersai-pendency-report') {
+      this.ewsApi.getCersaiPendencyReport(activeFilters).subscribe({
+        next: (res: any) => {
+          this.summaryCards.set([
+            { label: 'Total Pending CERSAI A/Cs', value: (res?.total_pending_accounts || 0).toLocaleString('en-IN'), colorClass: 'text-red-700' },
+            { label: 'Total Principal O/s Affected', value: this.formatCurrency(res?.total_affected_principal), colorClass: 'text-slate-900' },
+            { label: 'Branches Affected', value: String(res?.branch_summary?.length || 0), colorClass: 'text-indigo-700' }
+          ]);
+
+          this.secondaryTable.set({
+            title: 'Branch-Wise CERSAI Pendency Summary',
+            rows: res?.branch_summary || [],
+            columns: [
+              { key: 'branch_code', label: 'Branch Code', width: '90px', align: 'center' },
+              { key: 'branch_name', label: 'Branch Name' },
+              { key: 'pending_accounts', label: 'A/Cs Pending CERSAI', type: 'number', align: 'right', width: '150px' },
+              { key: 'affected_principal', label: 'Total Principal O/s Affected (₹)', type: 'currency', align: 'right' }
+            ]
+          });
+
+          this.rows.set(res?.accounts || []);
+          this.tableTitle = 'Top CERSAI-Pending Accounts by Exposure';
+          this.loading.set(false);
+        },
+        error: () => {
+          this.error.set('Failed to load CERSAI Pendency Report.');
+          this.loading.set(false);
+        }
+      });
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // Fallback: Legacy Reports
+    // ────────────────────────────────────────────────────────────────────────
+    else {
       this.ewsApi.getWatchList().subscribe({
-        next: (wl: any[]) => {
-          let filtered = wl || [];
-          if (slug === 'high-risk-priority') {
-            filtered = filtered.filter(r => r.risk_level === 'High');
-          }
+        next: (data: any[]) => {
+          let filtered = data || [];
           if (activeFilters['branch'] && activeFilters['branch'] !== 'all') {
             filtered = filtered.filter(r => r.branch === activeFilters['branch']);
           }
@@ -780,29 +1399,11 @@ export class EwsReportViewerComponent implements OnInit {
             const q = activeFilters['search'].toLowerCase();
             filtered = filtered.filter(r => (r.account_id || '').toLowerCase().includes(q) || (r.borrower_name || '').toLowerCase().includes(q));
           }
-          
-          if (slug === 'branch-risk-summary') {
-            const summaryMap = new Map<string, any>();
-            filtered.forEach(r => {
-              const bName = r.branch || 'Unknown';
-              if (!summaryMap.has(bName)) {
-                summaryMap.set(bName, { branch: bName, total_flagged: 0, high_risk: 0, medium_risk: 0, low_risk: 0, pending_inv: 0 });
-              }
-              const item = summaryMap.get(bName);
-              item.total_flagged++;
-              if (r.risk_level === 'High') item.high_risk++;
-              else if (r.risk_level === 'Medium') item.medium_risk++;
-              else if (r.risk_level === 'Low') item.low_risk++;
-              if (r.status === 'Under investigation') item.pending_inv++;
-            });
-            this.rows.set(Array.from(summaryMap.values()));
-          } else {
-            this.rows.set(filtered);
-          }
+          this.rows.set(filtered);
           this.loading.set(false);
         },
         error: () => {
-          this.error.set('Failed to retrieve watch list report data.');
+          this.error.set('Failed to load watch list report data.');
           this.loading.set(false);
         }
       });
@@ -826,14 +1427,75 @@ export class EwsReportViewerComponent implements OnInit {
   }
 
   exportExcel() {
-    const data = this.rows();
     const def = this.definition();
-    if (data.length && def) {
+    if (!def) return;
+
+    const fileName = `${def.slug}_${new Date().getTime()}`;
+    const reportHeaders = [
+      'RAJARSHI SHAHU SAHAKARI BANK LTD. PUNE',
+      'EARLY WARNING SIGNAL (EWS) SYSTEM — OFFICIAL RISK REPORT',
+      def.title.toUpperCase(),
+      `REPORT RUN DATE: ${this.fullDateTime.toUpperCase()}`
+    ];
+
+    if (this.secondaryTable() && this.secondaryTable()!.rows.length > 0) {
+      // Multi-section Excel export
+      const sections = [
+        {
+          title: this.secondaryTable()!.title,
+          data: this.secondaryTable()!.rows,
+          columns: this.secondaryTable()!.columns.map(c => ({ field: c.key, header: c.label.toUpperCase() }))
+        },
+        {
+          title: this.tableTitle || 'Detailed Accounts',
+          data: this.rows(),
+          columns: def.columns.map(c => ({ field: c.key, header: c.label.toUpperCase() }))
+        }
+      ];
+      this.exportService.exportMultiSectionToExcel(sections, fileName, reportHeaders);
+    } else {
+      // Single table Excel export
       const cols = def.columns.map(c => ({ field: c.key, header: c.label.toUpperCase() }));
-      const fileName = `${this.reportSlug()}_${new Date().getTime()}`;
-      const headers = ['RAJARSHI SHAHU SAHAKARI BANK LTD. - EWS PLATFORM', def.title.toUpperCase(), `REPORT RUN DATE: ${this.fullDateTime.toUpperCase()}`];
-      this.exportService.exportToExcel(data, cols, fileName, headers);
+      this.exportService.exportToExcel(this.rows(), cols, fileName, reportHeaders);
     }
+  }
+
+  exportPdf() {
+    const def = this.definition();
+    if (!def) return;
+
+    const cards = this.summaryCards().map(c => ({ label: c.label, value: String(c.value) }));
+    const cols = def.columns.map(c => ({
+      field: c.key,
+      header: c.label,
+      align: c.align || 'left',
+      width: c.key === 'signals_triggered' ? 80 : undefined
+    }));
+
+    let secTables: any[] = [];
+    if (this.secondaryTable() && this.secondaryTable()!.rows.length > 0) {
+      secTables.push({
+        title: this.secondaryTable()!.title,
+        data: this.secondaryTable()!.rows,
+        columns: this.secondaryTable()!.columns.map(c => ({
+          field: c.key,
+          header: c.label,
+          align: c.align || 'left'
+        }))
+      });
+    }
+
+    this.exportService.exportToPdf({
+      data: this.rows(),
+      columns: cols,
+      fileName: def.slug,
+      reportTitle: def.title,
+      reportSubtitle: `${def.desc} | Run Date: ${this.fullDateTime}`,
+      orientation: def.orientation || (def.columns.length > 6 ? 'landscape' : 'portrait'),
+      summaryCards: cards.length > 0 ? cards.slice(0, 6) : undefined,
+      secondaryTables: secTables.length > 0 ? secTables : undefined,
+      notes: def.notes
+    });
   }
 
   goBack() {
@@ -843,18 +1505,33 @@ export class EwsReportViewerComponent implements OnInit {
   formatDate(val: any): string {
     if (!val) return '—';
     try {
-      return new Date(val).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+      return new Date(val).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     } catch {
       return String(val);
     }
   }
 
+  formatCurrency(val: any): string {
+    if (val === null || val === undefined || val === '') return '—';
+    const num = Number(val);
+    if (isNaN(num)) return String(val);
+    return '₹ ' + num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
   statusSeverity(val: string): string {
-    const v = (val || '').toLowerCase();
-    if (v.includes('high') || v.includes('npa') || v.includes('overdue')) return 'bg-red-50 text-red-700 border-1 border-red-200';
-    if (v.includes('medium') || v.includes('pending')) return 'bg-amber-50 text-amber-700 border-1 border-amber-200';
-    if (v.includes('low') || v.includes('resolved') || v.includes('normal') || v.includes('active')) return 'bg-emerald-50 text-emerald-700 border-1 border-emerald-200';
-    if (v.includes('investigation')) return 'bg-blue-50 text-blue-700 border-1 border-blue-200';
+    const v = (val || '').toUpperCase();
+    if (v.includes('VERY HIGH') || v.includes('NPA') || v.includes('LAPSED') || v.includes('OVERDUE') || v.includes('DOUBTFUL') || v.includes('SUB STANDARD')) {
+      return 'bg-red-50 text-red-700 border-1 border-red-200';
+    }
+    if (v.includes('HIGH') || v.includes('SMA 1') || v.includes('SMA 2') || v.includes('DUE ≤ 30') || v.includes('NOT NOTED') || v.includes('NOT ON RECORD')) {
+      return 'bg-orange-50 text-orange-700 border-1 border-orange-200';
+    }
+    if (v.includes('MEDIUM') || v.includes('SMA 0') || v.includes('DUE ≤ 90') || v.includes('PENDING')) {
+      return 'bg-amber-50 text-amber-700 border-1 border-amber-200';
+    }
+    if (v.includes('LOW') || v.includes('STANDARD') || v.includes('CURRENT') || v.includes('ACTIVE') || v.includes('NORMAL')) {
+      return 'bg-emerald-50 text-emerald-700 border-1 border-emerald-200';
+    }
     return 'bg-surface-100 text-700 border-1 surface-border';
   }
 }

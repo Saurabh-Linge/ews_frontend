@@ -273,7 +273,51 @@ export class EwsApiService {
   }
 
   // ── Reports ───────────────────────────────────────────────────
-  getReport(type: string): Observable<any> {
-    return this.http.get(`${this.base}/reports/${type}`);
+  getReport(type: string, params?: any): Observable<any> {
+    let httpParams = new HttpParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          httpParams = httpParams.set(key, String(value));
+        }
+      });
+    }
+    return this.http.get(`${this.base}/reports/${type}`, { params: httpParams });
+  }
+
+  getAccountSignalDetailReport(params?: any): Observable<any[]> {
+    return this.getReport('account-signal-detail', params);
+  }
+
+  getBranchWiseSummaryReport(params?: any): Observable<any[]> {
+    return this.getReport('branch-wise-summary', params);
+  }
+
+  getSignalWiseDistributionReport(params?: any): Observable<any> {
+    return this.getReport('signal-wise-distribution', params);
+  }
+
+  getLoanTypeRiskReport(params?: any): Observable<any[]> {
+    return this.getReport('loan-type-risk', params);
+  }
+
+  getCroDashboardReport(params?: any): Observable<any> {
+    return this.getReport('cro-dashboard-report', params);
+  }
+
+  getRbiComplianceReport(params?: any): Observable<any> {
+    return this.getReport('rbi-compliance', params);
+  }
+
+  getInspectionDueReport(params?: any): Observable<any[]> {
+    return this.getReport('inspection-due', params);
+  }
+
+  getInsuranceRenewalReport(params?: any): Observable<any> {
+    return this.getReport('insurance-renewal', params);
+  }
+
+  getCersaiPendencyReport(params?: any): Observable<any> {
+    return this.getReport('cersai-pendency', params);
   }
 }

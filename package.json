@@ -39,6 +39,8 @@
     "@types/prismjs": "^1.26.6",
     "chart.js": "4.4.2",
     "codejar": "^4.3.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "primeclt": "^0.1.5",
     "primeflex": "^4.0.0",
     "primeicons": "^7.0.0",
